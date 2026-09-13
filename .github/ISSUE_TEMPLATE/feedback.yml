@@ -1,0 +1,40 @@
+name: 产品体验与建议
+description: 分享你的使用感受、场景或改进想法
+title: "[建议] "
+labels:
+  - feedback
+body:
+  - type: markdown
+    attributes:
+      value: |
+        谢谢你愿意帮助“有来有往”变得更清楚、更克制。请勿提交真实姓名、账号、聊天截图、转账单号或其他敏感材料。
+  - type: dropdown
+    id: perspective
+    attributes:
+      label: 你从什么角度体验这个产品？
+      options:
+        - 普通用户
+        - 律师或法律从业者
+        - 产品或设计从业者
+        - 开发者
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: scene
+    attributes:
+      label: 你想到的真实场景是什么？
+      description: 请使用虚构称呼和经过匿名化的信息。
+    validations:
+      required: true
+  - type: textarea
+    id: feedback
+    attributes:
+      label: 哪个部分有帮助，哪个部分需要调整？
+    validations:
+      required: true
+  - type: textarea
+    id: boundary
+    attributes:
+      label: 你认为这个产品不应该做什么？
+      description: 欢迎指出隐私、关系感受、法律责任或产品边界方面的风险。

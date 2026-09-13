@@ -1,0 +1,30 @@
+name: 原型问题反馈
+description: 报告无法打开、显示异常或功能失效
+title: "[问题] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请勿上传真实聊天截图、付款凭证或其他个人敏感信息。复现问题时可以使用演示数据。
+  - type: input
+    id: environment
+    attributes:
+      label: 测试环境
+      description: 例如 Windows 11 / Edge
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 如何复现？
+      description: 请按顺序说明点击了什么、看到了什么。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 你原本期待什么结果？
+    validations:
+      required: true
