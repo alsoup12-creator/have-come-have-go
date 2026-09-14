@@ -142,7 +142,7 @@ function defaultData() {
   const ambiguousId = "demo-ambiguous";
   return {
     demoVersion: 2,
-    settings: { monthlyLimit: 12000, singleLimit: 5000, lawyerLine: 30000, notificationsEnabled: false, inactivityDays: 30, lastInactivityNotices: {} },
+    settings: { monthlyLimit: 12000, yearlyLimit: 100000, singleLimit: 5000, lawyerLine: 30000, notificationsEnabled: false, inactivityDays: 30, lastInactivityNotices: {} },
     activeRelationshipId: relationId,
     relationships: [
       { id: relationId, name: "她", type: "lover", startDate: offsetDate(-120), note: "演示关系" },
@@ -165,7 +165,7 @@ function defaultData() {
 function emptyData() {
   const relationId = "empty-relation";
   return {
-    settings: { monthlyLimit: 12000, singleLimit: 5000, lawyerLine: 30000, notificationsEnabled: false, inactivityDays: 30, lastInactivityNotices: {} },
+    settings: { monthlyLimit: 12000, yearlyLimit: 100000, singleLimit: 5000, lawyerLine: 30000, notificationsEnabled: false, inactivityDays: 30, lastInactivityNotices: {} },
     activeRelationshipId: relationId,
     relationships: [
       { id: relationId, name: "—", type: "lover", startDate: "", note: "" }
@@ -194,6 +194,7 @@ function normalizeData(data) {
     && data.records.every(record => legacyDemoTitles.has(record.title));
   if (isUntouchedLegacyDemo) return defaultData();
   data.settings = data.settings || {};
+  if (!Object.prototype.hasOwnProperty.call(data.settings, "yearlyLimit")) data.settings.yearlyLimit = 100000;
   if (typeof data.settings.notificationsEnabled !== "boolean") data.settings.notificationsEnabled = false;
   if (!Number(data.settings.inactivityDays)) data.settings.inactivityDays = 30;
   if (!data.settings.lastInactivityNotices || typeof data.settings.lastInactivityNotices !== "object") data.settings.lastInactivityNotices = {};
@@ -282,8 +283,17 @@ function monthRecords() {
   return activeRecords().filter(r => r.date.startsWith(month));
 }
 
+function yearRecords() {
+  const year = new Date().toISOString().slice(0, 4);
+  return activeRecords().filter(r => r.date.startsWith(year));
+}
+
 function myMonthSpend() {
   return monthRecords().reduce((sum, r) => sum + Number(r.amount), 0);
+}
+
+function myYearSpend() {
+  return yearRecords().reduce((sum, r) => sum + Number(r.amount), 0);
 }
 
 function pendingRecords() {
@@ -335,11 +345,24 @@ function relationshipMonthSpend(relationId) {
   return relationshipMonthRecords(relationId).reduce((sum, record) => sum + Number(record.amount), 0);
 }
 
+function relationshipYearRecords(relationId) {
+  const year = new Date().toISOString().slice(0, 4);
+  return recordsForRelationship(relationId).filter(record => record.date.startsWith(year));
+}
+
+function relationshipYearSpend(relationId) {
+  return relationshipYearRecords(relationId).reduce((sum, record) => sum + Number(record.amount), 0);
+}
+
 function relationshipBoundaryAlert(relation) {
   if (!relation || !["friend", "dating", "matchmaking", "ambiguous"].includes(relation.type)) return null;
-  const recent = recordsForRelationship(relation.id).filter(record => daysSince(record.date) <= 45);
+  const recent = recordsForRelationship(relation.id).filter(record => {
+    const elapsed = daysSince(record.date);
+    return elapsed !== null && elapsed <= 45;
+  });
   const gifts = recent.filter(record => record.category === "gift");
-  const large = recent.filter(record => Number(record.amount) >= Number(state.data.settings.singleLimit || 5000));
+  const singleLimit = Number(state.data.settings.singleLimit || 0);
+  const large = singleLimit > 0 ? recent.filter(record => Number(record.amount) >= singleLimit) : [];
   if (gifts.length < 2 && !large.length) return null;
   const reasons = [];
   if (gifts.length >= 2) reasons.push(text(`45天内连续记录了 ${gifts.length} 次送礼`, `${gifts.length} gifts recorded within 45 days`));
@@ -386,7 +409,9 @@ function escapeHTML(value) {
   return String(value ?? "").replace(/[&<>'"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[ch]);
 }
 
-function render() {
+function render({ preserveScroll = false } = {}) {
+  const view = document.getElementById("appView");
+  const previousScrollTop = view.scrollTop;
   applyStaticLocale();
   const [title, dateLabel] = pageMeta[state.language][state.page];
   const relation = scopedRelationship();
@@ -395,9 +420,8 @@ function render() {
     : title;
   document.getElementById("todayLabel").textContent = state.page === "home" ? fullDate() : dateLabel;
   document.querySelectorAll(".nav-item").forEach(btn => btn.classList.toggle("active", btn.dataset.page === state.page));
-  const view = document.getElementById("appView");
   view.innerHTML = renderRelationshipStrip() + ({ home: renderHome, records: renderRecords, clarify: renderClarify, me: renderMe })[state.page]();
-  view.scrollTop = 0;
+  view.scrollTop = preserveScroll ? previousScrollTop : 0;
   maybeNotifyInactive();
 }
 
@@ -416,19 +440,19 @@ function renderRelationshipStrip() {
     </div>`;
   }
   const allSpend = relations.reduce((sum, relation) => sum + relationshipMonthSpend(relation.id), 0);
+  const allYearSpend = relations.reduce((sum, relation) => sum + relationshipYearSpend(relation.id), 0);
   const cards = relations.map(relation => {
     const alert = relationshipBoundaryAlert(relation);
-    const count = recordsForRelationship(relation.id).length;
     return `<button class="relationship-scope-card ${state.relationshipScope === relation.id ? "active" : ""}" data-action="set-relationship-scope" data-id="${relation.id}">
       <span class="relationship-card-top"><i>${escapeHTML(relationshipTypeLabel(relation.type).slice(0,1))}</i><em>${relationshipTypeLabel(relation.type)}${alert ? " · !" : ""}</em></span>
       <b>${escapeHTML(displayRelationName(relation))}</b>
-      <small>${text(`本月 ¥${money(relationshipMonthSpend(relation.id))} · ${count} 笔`, `¥${money(relationshipMonthSpend(relation.id))} this month · ${count} entries`)}</small>
+      <small>${text(`本月 ¥${money(relationshipMonthSpend(relation.id))} · 本年 ¥${money(relationshipYearSpend(relation.id))}`, `Month ¥${money(relationshipMonthSpend(relation.id))} · Year ¥${money(relationshipYearSpend(relation.id))}`)}</small>
     </button>`;
   }).join("");
   return `<section class="relationship-overview">
     <div class="relationship-overview-head"><div><b>${text("关系总览", "Relationship overview")}</b><span>${text("点一段关系看单独统计", "Choose one for its own statistics")}</span></div><div><button data-action="open-relationships">${text("管理", "Manage")}</button><button data-action="open-new-relationship">＋ ${text("新建", "New")}</button></div></div>
     <div class="relationship-card-grid">
-      <button class="relationship-scope-card all ${state.relationshipScope === "all" ? "active" : ""}" data-action="set-relationship-scope" data-id="all"><span class="relationship-card-top"><i>全</i><em>${text(`${relations.length} 段关系`, `${relations.length} relationships`)}</em></span><b>${text("全部关系", "All relationships")}</b><small>${text(`本月 ¥${money(allSpend)}`, `¥${money(allSpend)} this month`)}</small></button>
+      <button class="relationship-scope-card all ${state.relationshipScope === "all" ? "active" : ""}" data-action="set-relationship-scope" data-id="all"><span class="relationship-card-top"><i>全</i><em>${text(`${relations.length} 段关系`, `${relations.length} relationships`)}</em></span><b>${text("全部关系", "All relationships")}</b><small>${text(`本月 ¥${money(allSpend)} · 本年 ¥${money(allYearSpend)}`, `Month ¥${money(allSpend)} · Year ¥${money(allYearSpend)}`)}</small></button>
       ${cards}
     </div>
   </section>`;
@@ -441,8 +465,10 @@ function fullDate() {
 function renderHome() {
   const relation = scopedRelationship();
   const spend = myMonthSpend();
-  const limit = Number(state.data.settings.monthlyLimit || 1);
-  const percent = Math.min(100, Math.round(spend / limit * 100));
+  const yearlySpend = myYearSpend();
+  const limit = Number(state.data.settings.monthlyLimit || 0);
+  const yearlyLimit = Number(state.data.settings.yearlyLimit || 0);
+  const percent = limit > 0 ? Math.min(100, Math.round(spend / limit * 100)) : 0;
   const pending = pendingRecords().length;
   const streak = consecutiveMine();
   const inactivity = relation ? inactivityState(relation) : null;
@@ -450,7 +476,8 @@ function renderHome() {
   if (state.perspective === "ideal" && relation) return renderIdealHome({ relation, spend, limit, percent, streak });
   const insights = [];
 
-  if (spend >= limit) insights.push(`<article class="insight-card peach" data-action="go-me"><div class="insight-top"><div><h4>${text("你已越过本月提醒线", "You have crossed your monthly reminder line")}</h4><p>${text("不是说你花错了，只是想问：这是你原本愿意承担的程度吗？", "This does not mean you spent wrongly. Is this still what you meant to take on?")}</p></div><span class="arrow">›</span></div></article>`);
+  if (limit > 0 && spend >= limit) insights.push(`<article class="insight-card peach" data-action="go-me"><div class="insight-top"><div><h4>${text("你已越过自己设置的本月提醒线", "You have crossed your monthly reminder line")}</h4><p>${text("不是说你花错了，只是想问：这是你原本愿意承担的程度吗？", "This does not mean you spent wrongly. Is this still what you meant to take on?")}</p></div><span class="arrow">›</span></div></article>`);
+  if (yearlyLimit > 0 && yearlySpend >= yearlyLimit) insights.push(`<article class="insight-card peach" data-action="go-me"><div class="insight-top"><div><h4>${text("你已越过自己设置的本年提醒线", "You have crossed your yearly reminder line")}</h4><p>${text(`今年这段关系中，你已记录 ¥${money(yearlySpend)}。停一下，看看这是否仍是你愿意的累计程度。`, `You have recorded ¥${money(yearlySpend)} in this relationship this year. Pause and consider whether this cumulative level still feels chosen.`)}</p></div><span class="arrow">›</span></div></article>`);
   boundaryAlertsForScope().forEach(alert => insights.push(`<article class="insight-card quiet-alert" data-action="set-relationship-scope" data-id="${alert.relation.id}"><div class="insight-top"><div><h4>${text(`和${displayRelationName(alert.relation)}的关系，真的到这一步了吗？`, `Has your relationship with ${displayRelationName(alert.relation)} really reached this point?`)}</h4><p>${escapeHTML(alert.reasons.join("，"))}。${text("对方有过相应的付出吗？你从这段关系中得到了什么？先停一下看看。", "Has the other person contributed in return? What are you receiving from this relationship? Pause and take a look.")}</p></div><span class="arrow">›</span></div></article>`));
   if (streak >= 3) insights.push(`<article class="insight-card sage" data-action="go-records"><div class="insight-top"><div><h4>${text(`最近30天，你记录了 ${streak} 次自己的支出`, `${streak} of your payments were recorded in the last 30 days`)}</h4><p>${text("不需要替对方记账，只需要问问自己：这样的频率仍然是你愿意的吗？对方有没有用其他方式回应？", "You do not need to keep the other person's accounts. Ask whether this pace still feels chosen, and whether care is being returned in other ways.")}</p></div><span class="arrow">›</span></div></article>`);
   if (pending) insights.push(`<article class="insight-card amber" data-action="go-clarify"><div class="insight-top"><div><h4>${text(`${pending} 笔钱还没有说清楚`, `${pending} item${pending === 1 ? "" : "s"} may need clarification`)}</h4><p>${text("越早确认，越不需要在以后靠回忆争论。", "Clear facts early, so you do not have to argue from memory later.")}</p></div><span class="arrow">›</span></div></article>`);
@@ -463,7 +490,7 @@ function renderHome() {
       <div class="hero-value">¥ ${money(spend)}</div>
       <div class="hero-sub">${relation ? text("只记录你的支出 · 对方是否也有回应，由你自己观察", "Only your spending is recorded · You decide whether care is returned") : text(`${state.data.relationships.filter(item => item.id !== "empty-relation").length} 段关系 · ${monthRecords().length} 笔本月记录`, `${state.data.relationships.filter(item => item.id !== "empty-relation").length} relationships · ${monthRecords().length} entries this month`)}</div>
       <div class="hero-progress"><span style="width:${percent}%"></span></div>
-      <div class="hero-foot"><span>${text("提醒线", "Reminder line")} ¥${money(limit)}</span><span>${percent}%</span></div>
+      <div class="hero-foot"><span>${limit > 0 ? `${text("自设月度提醒线", "Your monthly line")} ¥${money(limit)}` : text("尚未设置月度提醒线", "No monthly line set")}</span><span>${limit > 0 ? `${percent}%` : "—"}</span></div>
     </section>
     ${renderEntryGrid()}
     <article class="record-principle"><b>${selfCopy.principleTitle}</b><p>${selfCopy.principleBody}</p></article>
@@ -650,15 +677,25 @@ function renderClarifyGroups(records) {
     if (!categories.has(record.category)) categories.set(record.category, []);
     categories.get(record.category).push(record);
   });
+  const hasSelection = selected.size > 0;
   return [...monthGroups.entries()].map(([month, categories]) => {
     const monthRecordsList = [...categories.values()].flat();
-    const categoryBlocks = [...categories.entries()].map(([category, items]) => `<div class="clarify-category-group"><h5><span>${categoryIcon(category)} ${categoryLabel(category)}</span><em>${items.length} ${text("笔", "")}</em></h5>${items.map(record => `<article class="clarify-record-row ${selected.has(record.id) ? "selected" : ""}">
+    const selectedMonthRecords = monthRecordsList.filter(record => selected.has(record.id));
+    const monthAmount = (hasSelection ? selectedMonthRecords : monthRecordsList).reduce((sum, record) => sum + Number(record.amount), 0);
+    const monthSummary = hasSelection
+      ? text(`已选 ${selectedMonthRecords.length}/${monthRecordsList.length} 笔 · ¥${money(monthAmount)}`, `Selected ${selectedMonthRecords.length}/${monthRecordsList.length} · ¥${money(monthAmount)}`)
+      : text(`当前范围 ${monthRecordsList.length} 笔 · ¥${money(monthAmount)}`, `${monthRecordsList.length} in view · ¥${money(monthAmount)}`);
+    const categoryBlocks = [...categories.entries()].map(([category, items]) => {
+      const selectedItems = items.filter(record => selected.has(record.id));
+      const categoryCount = hasSelection ? text(`已选 ${selectedItems.length}/${items.length} 笔`, `Selected ${selectedItems.length}/${items.length}`) : text(`${items.length} 笔`, `${items.length}`);
+      return `<div class="clarify-category-group"><h5><span>${categoryIcon(category)} ${categoryLabel(category)}</span><em>${categoryCount}</em></h5>${items.map(record => `<article class="clarify-record-row ${selected.has(record.id) ? "selected" : ""}">
       <button class="clarify-check" data-action="toggle-clarify-record" data-id="${record.id}" aria-label="${text("选择记录", "Select entry")}">${selected.has(record.id) ? "✓" : ""}</button>
       <div><b>${escapeHTML(displayRecordTitle(record))}</b><span>${formatDate(record.date)}${record.transferMemo ? ` · ${text("附言", "Memo")}: ${escapeHTML(record.transferMemo)}` : ""}</span></div>
       <strong>¥${money(record.amount)}</strong>
       <button class="clarify-detail" data-action="record-detail" data-id="${record.id}">${text("详情", "Details")}</button>
-    </article>`).join("")}</div>`).join("");
-    return `<section class="clarify-month-group"><div class="clarify-month-head"><b>${monthHeading(month)}</b><span>${monthRecordsList.length} ${text("笔", "entries")} · ¥${money(monthRecordsList.reduce((sum, record) => sum + Number(record.amount), 0))}</span></div>${categoryBlocks}</section>`;
+    </article>`).join("")}</div>`;
+    }).join("");
+    return `<section class="clarify-month-group"><div class="clarify-month-head"><b>${monthHeading(month)}</b><span>${monthSummary}</span></div>${categoryBlocks}</section>`;
   }).join("");
 }
 
@@ -690,23 +727,29 @@ function renderClarify() {
 }
 
 function renderMe() {
-  const mySpend = myMonthSpend();
+  const monthSpend = myMonthSpend();
+  const yearlySpend = myYearSpend();
   const scope = scopedRelationship();
-  const largeCount = monthRecords().filter(record => Number(record.amount) >= Number(state.data.settings.singleLimit || 0)).length;
+  const singleLimit = Number(state.data.settings.singleLimit || 0);
+  const yearlyLargeCount = singleLimit > 0 ? yearRecords().filter(record => Number(record.amount) >= singleLimit).length : 0;
   return `
     <div class="page-intro"><h3>${text("看看最近的自己", "Look at your recent pattern")}</h3><p>${text("数字只是镜子。它帮助你觉察模式，不替你决定应该爱谁、应该花多少。", "Numbers are a mirror. They can reveal a pattern, but they do not decide whom to love or how much to spend.")}</p></div>
     <div class="metric-grid">
-      <div class="metric-card"><span>${text(scope ? "这段关系本月支出" : "全部关系本月支出", scope ? "This relationship this month" : "All relationships this month")}</span><strong>¥${money(mySpend)}</strong></div>
+      <div class="metric-card"><span>${text(scope ? "这段关系本月支出" : "全部关系本月支出", scope ? "This relationship this month" : "All relationships this month")}</span><strong>¥${money(monthSpend)}</strong></div>
+      <div class="metric-card"><span>${text(scope ? "这段关系本年支出" : "全部关系本年支出", scope ? "This relationship this year" : "All relationships this year")}</span><strong>¥${money(yearlySpend)}</strong></div>
       <div class="metric-card"><span>${text("本月留下记录", "Records this month")}</span><strong>${monthRecords().length}</strong><small>${text("笔", "")}</small></div>
-      <div class="metric-card"><span>${text("本月大额支出", "Large payments this month")}</span><strong>${largeCount}</strong><small>${text("笔", "")}</small></div>
+      <div class="metric-card"><span>${text("本年留下记录", "Records this year")}</span><strong>${yearRecords().length}</strong><small>${text("笔", "")}</small></div>
+      <div class="metric-card"><span>${text("本年大额支出", "Large payments this year")}</span><strong>${yearlyLargeCount}</strong><small>${text("笔", "")}</small></div>
       <div class="metric-card"><span>${text("尚未说清", "Not yet clear")}</span><strong>${activeRecords().filter(r => r.status === "pending").length}</strong><small>${text("笔", "")}</small></div>
     </div>
-    <div class="section-head"><h3>${text("你的提醒线", "Your reminder lines")}</h3></div>
+    <div class="section-head"><h3>${text("你自己设定的提醒线", "Reminder lines you set")}</h3></div>
     <div class="settings-card">
-      <div class="settings-row"><div><b>${text("每月关系支出", "Monthly relationship spending")}</b><span>${text("达到后提醒你回看", "Remind you when reached")}</span></div><input type="number" min="0" data-setting="monthlyLimit" value="${state.data.settings.monthlyLimit}"></div>
-      <div class="settings-row"><div><b>${text("单笔大额支出", "Single large payment")}</b><span>${text("达到后提醒这笔值得留下", "Suggest keeping a record")}</span></div><input type="number" min="0" data-setting="singleLimit" value="${state.data.settings.singleLimit}"></div>
-      <div class="settings-row"><div><b>${text("法律关注金额", "Legal-attention amount")}</b><span>${text("建议整理材料而非直接下结论", "Organize facts before drawing conclusions")}</span></div><input type="number" min="0" data-setting="lawyerLine" value="${state.data.settings.lawyerLine}"></div>
+      <div class="settings-row"><div><b>${text("月度累计提醒线", "Monthly total line")}</b><span>${text("本月累计达到后提醒你回看", "Review when the monthly total reaches it")}</span></div><input type="number" min="0" data-setting="monthlyLimit" value="${state.data.settings.monthlyLimit}"></div>
+      <div class="settings-row"><div><b>${text("年度累计提醒线", "Yearly total line")}</b><span>${text("本年累计达到后提醒你回看", "Review when the yearly total reaches it")}</span></div><input type="number" min="0" data-setting="yearlyLimit" value="${state.data.settings.yearlyLimit}"></div>
+      <div class="settings-row"><div><b>${text("单笔大额提醒线", "Single large-payment line")}</b><span>${text("达到后提醒这笔值得留下", "Suggest keeping a record")}</span></div><input type="number" min="0" data-setting="singleLimit" value="${state.data.settings.singleLimit}"></div>
+      <div class="settings-row"><div><b>${text("法律关注提醒线", "Legal-attention line")}</b><span>${text("建议整理材料而非直接下结论", "Organize facts before drawing conclusions")}</span></div><input type="number" min="0" data-setting="lawyerLine" value="${state.data.settings.lawyerLine}"></div>
     </div>
+    <p class="local-reminder-note">${text("这些金额全部由你自行设置，不代表法律标准；某项填写 0，表示关闭该类金额提醒。", "You set every amount yourself. They are not legal standards; enter 0 to turn off that reminder.")}</p>
     <div class="section-head"><h3>${text("关系状态提醒", "Relationship status reminder")}</h3><button data-action="preview-inactivity">${text("预览提醒", "Preview")}</button></div>
     <div class="settings-card">
       <div class="settings-row"><div><b>${text("开启通知", "Enable notifications")}</b><span>${text("长期没有记录时，提醒你确认关系状态", "Check in after a long gap")}</span></div><button class="toggle-control ${state.data.settings.notificationsEnabled ? "on" : ""}" role="switch" aria-checked="${state.data.settings.notificationsEnabled}" data-action="toggle-notifications"><i></i></button></div>
@@ -866,7 +909,8 @@ function saveDraft() {
   state.draft.amount = Number(state.draft.amount);
   const noteTitle = state.draft.transferMemo || state.draft.note;
   state.draft.title = state.draft.title || (noteTitle ? noteTitle.trim().slice(0, 36) : text(`${categoryLabel(state.draft.category)}记录`, `${categoryLabel(state.draft.category)} record`));
-  const isLarge = state.draft.amount >= Number(state.data.settings.singleLimit || 0);
+  const singleLimit = Number(state.data.settings.singleLimit || 0);
+  const isLarge = singleLimit > 0 && state.draft.amount >= singleLimit;
   const needsReview = state.draft.category === "transfer";
   state.draft.attention = isLarge || needsReview;
   state.draft.status = needsReview ? "pending" : "recorded";
@@ -1283,13 +1327,13 @@ document.addEventListener("click", async event => {
     state.clarifySelected = state.clarifySelected.includes(target.dataset.id)
       ? state.clarifySelected.filter(id => id !== target.dataset.id)
       : [...state.clarifySelected, target.dataset.id];
-    render();
+    render({ preserveScroll: true });
   }
   if (action === "select-all-clarify") {
     state.clarifySelected = [...new Set([...state.clarifySelected, ...clarifyCandidateRecords().map(record => record.id)])];
-    render();
+    render({ preserveScroll: true });
   }
-  if (action === "clear-clarify-selection") { state.clarifySelected = []; render(); }
+  if (action === "clear-clarify-selection") { state.clarifySelected = []; render({ preserveScroll: true }); }
   if (action === "set-clarify-mode") { state.clarifyMode = target.dataset.mode; render(); }
   if (action === "prepare-direct") prepareDirect();
   if (action === "prepare-lawyer") prepareLawyer();
@@ -1337,7 +1381,7 @@ document.addEventListener("change", event => {
   if (event.target.matches("[data-clarify-month]")) { state.clarifyMonth = event.target.value; render(); }
   if (event.target.matches("[data-setting]")) {
     state.data.settings[event.target.dataset.setting] = Number(event.target.value || 0);
-    saveData(); render(); toast(text("设置已保存", "Setting saved"));
+    saveData(); render({ preserveScroll: true }); toast(text("设置已保存", "Setting saved"));
   }
 });
 
