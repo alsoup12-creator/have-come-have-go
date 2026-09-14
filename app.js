@@ -224,7 +224,12 @@ function activeRelationship() {
   return state.data.relationships.find(r => r.id === state.data.activeRelationshipId) || state.data.relationships[0];
 }
 
+function isRelationshipOverviewPage() {
+  return state.page === "clarify" || state.page === "me";
+}
+
 function scopedRelationship() {
+  if (!isRelationshipOverviewPage()) return activeRelationship();
   if (state.relationshipScope === "all") return null;
   return state.data.relationships.find(r => r.id === state.relationshipScope) || null;
 }
@@ -235,6 +240,7 @@ function relationshipById(id) {
 
 function activeRecords() {
   const ownRecords = state.data.records.filter(r => r.payer !== "other");
+  if (!isRelationshipOverviewPage()) return ownRecords.filter(r => r.relationshipId === activeRelationship().id);
   if (state.relationshipScope === "all") return ownRecords;
   return ownRecords.filter(r => r.relationshipId === state.relationshipScope);
 }
@@ -400,6 +406,13 @@ function renderRelationshipStrip() {
   if (!relations.length) {
     return `<div class="relationship-strip empty-relationship-strip">
       <button class="relationship-current" data-action="open-new-relationship"><span class="relationship-avatar">＋</span><span><small>${text("还没有建立关系", "No relationship yet")}</small><b>${text("新建一段关系开始记录", "Create one to start recording")}</b></span><i>›</i></button>
+    </div>`;
+  }
+  if (!isRelationshipOverviewPage()) {
+    const relation = activeRelationship();
+    return `<div class="relationship-strip">
+      <button class="relationship-current" data-action="open-relationships"><span class="relationship-avatar">${escapeHTML(relationshipTypeLabel(relation.type).slice(0,1))}</span><span><small>${text("当前关系", "Current relationship")}</small><b>${escapeHTML(displayRelationName(relation))} · ${relationshipTypeLabel(relation.type)}</b></span><i>⌄</i></button>
+      <button class="relationship-new" data-action="open-new-relationship">＋ ${text("新建关系", "New")}</button>
     </div>`;
   }
   const allSpend = relations.reduce((sum, relation) => sum + relationshipMonthSpend(relation.id), 0);
@@ -859,6 +872,7 @@ function saveDraft() {
   state.draft.status = needsReview ? "pending" : "recorded";
   state.draft.nature = needsReview ? "待确认" : "支出记录";
   state.data.records.push({ ...state.draft });
+  state.data.activeRelationshipId = relation.id;
   saveData();
   closeModal();
   state.page = "home";
@@ -1222,7 +1236,6 @@ function saveRelationship() {
   }
   state.data.relationships.push(relation);
   state.data.activeRelationshipId = relation.id;
-  state.relationshipScope = relation.id;
   state.perspective = "self";
   saveData(); closeModal(); state.page = "home"; render(); toast(text(`已建立“${name}”这段关系`, `Relationship “${name}” created`));
 }
@@ -1240,12 +1253,12 @@ document.addEventListener("click", async event => {
   if (action === "open-relationships") showRelationships();
   if (action === "open-new-relationship") showNewRelationship();
   if (action === "save-relationship") saveRelationship();
-  if (action === "select-relationship") { state.data.activeRelationshipId = target.dataset.id; state.relationshipScope = target.dataset.id; state.perspective = "self"; saveData(); closeModal(); state.page = "home"; render(); toast(text("已切换当前关系", "Relationship switched")); }
+  if (action === "select-relationship") { state.data.activeRelationshipId = target.dataset.id; state.perspective = "self"; saveData(); closeModal(); state.page = "home"; render(); toast(text("已切换当前关系", "Relationship switched")); }
   if (action === "set-relationship-scope") {
-    state.relationshipScope = target.dataset.id;
+    if (isRelationshipOverviewPage()) state.relationshipScope = target.dataset.id;
+    else if (target.dataset.id !== "all") { state.data.activeRelationshipId = target.dataset.id; saveData(); }
     state.perspective = "self";
     state.clarifySelected = [];
-    if (target.dataset.id !== "all") { state.data.activeRelationshipId = target.dataset.id; saveData(); }
     render();
   }
   if (action === "open-entry-menu") openEntryMenu();
