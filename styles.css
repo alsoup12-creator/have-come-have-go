@@ -378,26 +378,12 @@ button { color: inherit; }
   width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px;
   background: var(--sage-soft); color: var(--sage-dark); font-style: normal; font-weight: 800;
 }
-.entry-option.wechat i { color: #168a42; background: #e2f4e8; }
+.entry-option.receipt i { color: #8b623f; background: #f4e8d9; }
+.entry-option.gift i { color: #a35662; background: #f7e3e7; }
 .entry-option b, .entry-option span { display: block; }
 .entry-option b { font-size: 12px; margin-bottom: 4px; }
 .entry-option span { color: var(--muted); font-size: 9px; line-height: 1.45; }
 .entry-option em { color: #aaa49f; font-style: normal; font-size: 18px; }
-.sync-card {
-  background: #eef8f1; border: 1px solid #d8eddf; border-radius: 20px; padding: 17px; margin-bottom: 12px;
-}
-.sync-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.sync-logo { width: 35px; height: 35px; border-radius: 12px; display: grid; place-items: center; background: #19a64a; color: white; font-weight: 800; }
-.sync-card h4 { margin: 0; font-size: 13px; }
-.sync-card p { margin: 0; color: #63736a; font-size: 10px; line-height: 1.65; }
-.sync-example {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  background: white; border: 1px solid var(--line); border-radius: 16px; padding: 13px; margin-top: 12px;
-}
-.sync-example b, .sync-example span { display: block; }
-.sync-example b { font-size: 12px; margin-bottom: 4px; }
-.sync-example span { color: var(--muted); font-size: 9px; }
-.sync-example strong { font-family: Georgia, serif; font-size: 17px; }
 .source-banner { background: #eef8f1; color: #4c6856; border-radius: 13px; padding: 10px 12px; font-size: 10px; margin-bottom: 15px; }
 .relation-legal-note { background: #f4f0e9; border-radius: 14px; padding: 11px 12px; margin-bottom: 15px; }
 .relation-legal-note b { display: block; font-size: 10px; margin-bottom: 4px; }

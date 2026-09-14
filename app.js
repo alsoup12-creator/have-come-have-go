@@ -87,12 +87,12 @@ function applyStaticLocale() {
     name: "Give & Take", tagline: "A private relationship spending journal",
     headline: "Love can be emotional.<br>Money deserves clarity.",
     intro: "An English interface for cross-border relationships, grounded in PRC law. Keep the facts, notice long-term patterns, and clarify important money when you are ready.",
-    points: ["Record meaningful relationship spending", "Choose a category, add a screenshot or note", "Receive calm, factual reminders"],
+    points: ["Record meaningful relationship spending", "Add a note, screenshot, receipt, or gift", "Receive calm, factual reminders"],
     local: "Prototype data stays in this browser", nav: ["Today", "Records", "Clarify", "Me"], privacy: "Privacy", add: "Choose how to record"
   } : {
     name: "有来有往", tagline: "关系支出自我觉察工具", headline: "爱可以感性，<br>钱最好清醒。",
     intro: "这不是共同账本。它只帮助你留下事实、看清长期的付出，并把重要的钱及时说清楚。",
-    points: ["记录一笔关系支出", "选类目，留截图或一句话", "得到克制而明确的提醒"],
+    points: ["记录一笔关系支出", "留文字、截图、小票或礼物", "得到克制而明确的提醒"],
     local: "初版数据仅保存在当前浏览器中", nav: ["今天", "记录", "说清", "我的"], privacy: "隐私说明", add: "选择记录方式"
   };
   document.documentElement.lang = en() ? "en" : "zh-CN";
@@ -358,7 +358,7 @@ function renderHome() {
       <div class="hero-progress"><span style="width:${percent}%"></span></div>
       <div class="hero-foot"><span>${text("提醒线", "Reminder line")} ¥${money(limit)}</span><span>${percent}%</span></div>
     </section>
-    ${renderEntryGrid(pending)}
+    ${renderEntryGrid()}
     <article class="record-principle"><b>${text("记录下来，是对自己付出的尊重", "Keeping a record respects what you contributed")}</b><p>${text("不必记录每一笔小钱。更值得留下的是：单笔较大、长期单方面付款，或让你心里没底的支出。都是你的血汗钱，值得被认真看见。", "You do not need to log every small purchase. Keep the larger payments, long one-sided patterns, and anything whose facts may matter later.")}</p></article>
     <div class="section-head"><h3>${text("给此刻的你", "For you, right now")}</h3><button data-action="show-principle">${text("提醒原则", "Why reminders?")}</button></div>
     ${insights.join("") || `<article class="insight-card sage"><h4>${text("目前没有需要特别提醒的事", "Nothing needs special attention right now")}</h4><p>${text("记录不是为了算计，而是为了不在情绪里忘记自己。", "This is not scorekeeping. It is a way to remember yourself clearly.")}</p></article>`}
@@ -376,12 +376,12 @@ function renderPerspectiveSwitch() {
   </div>`;
 }
 
-function renderEntryGrid(pending) {
+function renderEntryGrid() {
   return `<div class="quick-grid">
     <button class="quick-card" data-action="open-add-text"><b>${text("文", "T")}</b><span>${text("文字记录<br>写下一笔事实", "Text entry<br>Save the facts")}</span></button>
     <button class="quick-card" data-action="open-add-image"><b>${text("图", "S")}</b><span>${text("截图记录<br>付款或聊天凭证", "Screenshot<br>Payment or chat")}</span></button>
-    <button class="quick-card" data-action="open-wechat-sync"><b>${text("微", "W")}</b><span>${text("微信付款同步<br>像积分一样记下", "WeChat sync<br>Concept demo")}</span></button>
-    <button class="quick-card" data-action="go-clarify"><b>${pending}</b><span>${text("需要说清<br>的款项", "May need<br>clarifying")}</span></button>
+    <button class="quick-card" data-action="open-add-receipt"><b>${text("票", "R")}</b><span>${text("拍摄小票<br>留下消费凭证", "Receipt<br>Take a photo")}</span></button>
+    <button class="quick-card" data-action="open-add-gift"><b>${text("礼", "G")}</b><span>${text("礼物记录<br>备注名称和金额", "Gift<br>Name and amount")}</span></button>
   </div>`;
 }
 
@@ -413,7 +413,7 @@ function renderIdealHome({ spend, limit, percent, pending, streak }) {
       <p>${latestPaid ? `${formatDate(latestPaid.date)} · ${escapeHTML(displayRecordTitle(latestPaid))} · ¥${money(latestPaid.amount)}` : text("从一笔记录开始", "Start with one record")}</p>
     </article>
     <p class="mirror-note">${text("这是为付款方呈现的“理想回应”，不代表现实中的她真实这样想。", "This is an imagined ideal response for the person who paid. It is not a claim about what the other person actually thinks.")}</p>
-    ${renderEntryGrid(pending)}
+    ${renderEntryGrid()}
     <div class="section-head"><h3>${text("她也许会这样记得", "What an ideal response might sound like")}</h3><button data-action="show-ideal-meaning">${text("这是什么？", "What is this?")}</button></div>
     ${[...activeRecords()].filter(r => r.payer === "me").sort((a,b) => b.date.localeCompare(a.date)).slice(1,3).map(r => `<article class="insight-card peach"><h4>${escapeHTML(idealVoiceForRecord(r))}</h4><p>${formatDate(r.date)} · ${escapeHTML(displayRecordTitle(r))} · ¥${money(r.amount)}</p></article>`).join("")}
   `;
@@ -422,7 +422,12 @@ function renderIdealHome({ spend, limit, percent, pending, streak }) {
 function renderRecordCards(records) {
   if (!records.length) return `<div class="empty-state"><div class="empty-icon">○</div><h3>${text("还没有记录", "No records yet")}</h3><p>${text("记下事实即可，不需要马上给每笔钱下结论。", "Save the facts. You do not need to decide what every payment means right away.")}</p></div>`;
   return records.map(r => {
-    const source = r.source === "wechat-demo" ? text("微信同步示例", "WeChat demo") : r.image ? text("截图记录", "Screenshot") : text("文字记录", "Text entry");
+    const source = ({
+      image: text("截图记录", "Screenshot"),
+      receipt: text("小票记录", "Receipt"),
+      gift: text("礼物记录", "Gift"),
+      text: text("文字记录", "Text entry")
+    })[r.source] || (r.image ? text("截图记录", "Screenshot") : text("文字记录", "Text entry"));
     return `
     <article class="record-card" data-action="record-detail" data-id="${r.id}">
       <div class="record-icon">${categoryIcon(r.category)}</div>
@@ -508,7 +513,7 @@ function renderMe() {
     <p class="local-reminder-note">${text("当前是纯本地原型：应用内提醒可以体验；浏览器通知需由你主动授权，并且页面关闭后不能保证后台送达。正式小程序需接入微信订阅消息或服务号。", "This is a local prototype. In-app reminders work here; browser notifications require your permission and may not arrive after the page closes. A production app needs a compliant messaging service.")}</p>
     <div class="section-head"><h3>${text("正式小程序阶段", "Production-stage requirements")}</h3></div>
     <div class="settings-card">
-      <div class="roadmap-item"><i class="roadmap-dot"></i><div><b>${text("微信账单导入能力核实", "Verify payment-import access")}</b><span>${text("普通授权并不等于可以读取用户全部个人交易流水。", "Ordinary user authorization does not automatically allow full transaction-history access.")}</span></div></div>
+      <div class="roadmap-item"><i class="roadmap-dot"></i><div><b>${text("聊天截图多选与顺序整理", "Multi-select and order chat screenshots")}</b><span>${text("只处理用户主动选择的截图，不读取微信文字聊天记录。", "Only user-selected screenshots are processed; text chat history is not read.")}</span></div></div>
       <div class="roadmap-item"><i class="roadmap-dot"></i><div><b>${text("双方确认与可靠电子签", "Mutual confirmation and reliable e-signing")}</b><span>${text("需要身份核验、版本固化、时间记录和签署服务。", "Identity checks, fixed versions, timestamps, and a signing service are needed.")}</span></div></div>
       <div class="roadmap-item"><i class="roadmap-dot"></i><div><b>${text("订阅消息或服务号提醒", "Compliant reminder delivery")}</b><span>${text("需要遵守微信消息模板、用户订阅和发送场景限制。", "Messages must follow platform consent, template, and sending rules.")}</span></div></div>
     </div>
@@ -520,7 +525,7 @@ function renderMe() {
 
 function newDraft() {
   const relation = activeRelationship();
-  return { id: uid(), relationshipId: relation.id, date: new Date().toISOString().slice(0,10), title: "", category: "dining", transferMemo: "", counterparty: relation.name, amount: "", payer: "me", nature: "支出记录", note: "", dueDate: "", status: "recorded", image: "" };
+  return { id: uid(), relationshipId: relation.id, date: new Date().toISOString().slice(0,10), title: "", category: "dining", transferMemo: "", counterparty: relation.name, amount: "", payer: "me", nature: "支出记录", note: "", dueDate: "", status: "recorded", image: "", source: "text" };
 }
 
 function relationshipLegalHint(type) {
@@ -537,6 +542,8 @@ function relationshipLegalHint(type) {
 function openAdd(mode = "text") {
   state.entryMode = mode;
   state.draft = newDraft();
+  state.draft.source = mode;
+  if (mode === "gift") state.draft.category = "gift";
   renderAddModal();
 }
 
@@ -546,25 +553,10 @@ function openEntryMenu() {
     <div class="entry-menu">
       <button class="entry-option" data-action="open-add-text"><i>${text("文", "T")}</i><span><b>${text("文字记录", "Text entry")}</b><span>${text("金额、类目，再给自己留一句话", "Amount, category, and one sentence for yourself")}</span></span><em>›</em></button>
       <button class="entry-option" data-action="open-add-image"><i>${text("图", "S")}</i><span><b>${text("截图记录", "Screenshot entry")}</b><span>${text("选择截图，补上金额和类目即可", "Choose a screenshot, then add amount and category")}</span></span><em>›</em></button>
-      <button class="entry-option wechat" data-action="open-wechat-sync"><i>${text("微", "W")}</i><span><b>${text("微信付款同步", "WeChat Pay sync")}</b><span>${text("像商场积分一样，支付后形成待确认记录", "A concept demo: create an entry after payment")}</span></span><em>›</em></button>
+      <button class="entry-option receipt" data-action="open-add-receipt"><i>${text("票", "R")}</i><span><b>${text("拍摄小票", "Photograph receipt")}</b><span>${text("拍下或选择一张小票，再补金额和类目", "Take or choose a receipt, then add amount and category")}</span></span><em>›</em></button>
+      <button class="entry-option gift" data-action="open-add-gift"><i>${text("礼", "G")}</i><span><b>${text("礼物记录", "Gift entry")}</b><span>${text("简单备注礼物名称和金额", "Simply note the gift and its amount")}</span></span><em>›</em></button>
     </div>
   </div></div>`;
-}
-
-function showWechatSync() {
-  document.getElementById("modalRoot").innerHTML = `<div class="modal-backdrop"><div class="modal-card">
-    <div class="modal-head"><h3>${text("微信付款记录同步", "WeChat Pay record sync")}</h3><button class="close-button" data-action="close-modal">×</button></div>
-    <div class="sync-card"><div class="sync-card-head"><div class="sync-logo">${text("微", "W")}</div><div><h4>${text("支付后，自动形成一笔待完善记录", "Create a draft record after payment")}</h4></div></div><p>${text("产品设想类似商场积分：用户授权后，在平台允许的支付场景中获得金额、时间和商户信息，再由用户补充“这笔钱是什么”。", "The concept works like a loyalty-points flow: with consent and only where the platform permits, amount, time, and merchant details form a draft for the user to complete.")}</p></div>
-    <div class="sync-example"><div><b>${text("双人晚餐 · 同步示例", "Dinner for two · Sync demo")}</b><span>${text("今天 19:28 · 微信支付", "Today 19:28 · WeChat Pay")}</span></div><strong>¥268</strong></div>
-    <p class="disclaimer">${text("当前是本地原型，未连接真实微信账户，也不会读取你的微信钱包或聊天记录。下面只用示例数据体验后续分类流程。", "This local prototype is not connected to a real WeChat account and does not read your wallet or chats. The next step uses sample data only.")}</p>
-    <div class="modal-actions"><button class="secondary-button" data-action="open-entry-menu">${text("换一种记录方式", "Choose another method")}</button><button class="primary-button" data-action="sync-demo">${text("用示例体验同步", "Try the sync demo")}</button></div>
-  </div></div>`;
-}
-
-function startWechatDemo() {
-  state.entryMode = "wechat";
-  state.draft = { ...newDraft(), title: text("双人晚餐", "Dinner for two"), category: "dining", note: text("微信支付形成的待完善示例。", "Draft created from the WeChat Pay demo."), amount: 268, payer: "me", source: "wechat-demo" };
-  renderAddModal();
 }
 
 function renderAddModal() {
@@ -572,19 +564,33 @@ function renderAddModal() {
   const root = document.getElementById("modalRoot");
   {
     const categories = ["dining", "gift", "transfer", "travel", "daily", "other"].map(value => [value, categoryLabel(value)]);
-    const sourceText = state.entryMode === "wechat" ? text("微信同步示例 · 简单核对后保存", "WeChat sync demo · Check and save") : state.entryMode === "image" ? text("截图记录 · 图片只保存在当前设备", "Screenshot entry · Image stays on this device") : text("快速记录 · 先把事实留下来", "Quick entry · Save the facts first");
+    const sourceText = ({
+      text: text("文字记录 · 先把事实留下来", "Text entry · Save the facts first"),
+      image: text("截图记录 · 图片只保存在当前设备", "Screenshot entry · Image stays on this device"),
+      receipt: text("小票记录 · 拍摄或选择后仅保存在当前设备", "Receipt entry · The photo stays on this device"),
+      gift: text("礼物记录 · 记下礼物名称和金额即可", "Gift entry · Note the gift and its amount")
+    })[state.entryMode];
+    const titleLabel = ({
+      text: text("这笔是什么？（可不填）", "What was this for? (optional)"),
+      image: text("截图里的这笔是什么？（可不填）", "What does the screenshot show? (optional)"),
+      receipt: text("这张小票是什么？（可不填）", "What is this receipt for? (optional)"),
+      gift: text("礼物是什么？（可不填）", "What was the gift? (optional)")
+    })[state.entryMode];
+    const titlePlaceholder = state.entryMode === "gift" ? text("例如：手机、手表、生日礼物", "e.g. phone, watch, birthday gift") : text("例如：晚餐、车票、临时周转", "e.g. dinner, tickets, temporary help");
+    const needsImage = state.entryMode === "image" || state.entryMode === "receipt";
     const simpleBody = `
       <div class="source-banner">${sourceText}</div>
       <div class="form-grid" style="margin-top:14px">
         <div class="form-field"><label>${text("金额", "Amount")}</label><input data-draft="amount" type="number" min="0" step="0.01" value="${escapeHTML(d.amount)}" placeholder="0.00"></div>
         <div class="form-field"><label>${text("日期", "Date")}</label><input data-draft="date" type="date" value="${d.date}"></div>
       </div>
+      <div class="form-field"><label>${titleLabel}</label><input data-draft="title" value="${escapeHTML(d.title)}" placeholder="${titlePlaceholder}"></div>
       <div class="choice-question compact-question"><label>${text("谁付的？", "Who paid?")}</label><div class="choice-row two">${choiceButtons("payer", [["me",text("我付的", "I paid")],["other",text("对方付的", "They paid")]], d.payer)}</div></div>
-      <div class="choice-question compact-question"><label>${text("选个类目就行", "Choose a category")}</label><div class="category-grid">${categories.map(([value,label]) => `<button class="category-button ${d.category === value ? "active" : ""}" data-action="set-choice" data-field="category" data-value="${value}"><i>${categoryIcon(value)}</i>${label}</button>`).join("")}</div></div>
-      <label class="upload-zone compact-upload" for="receiptFile">
-        ${d.image ? `<img src="${d.image}" alt="${text("截图预览", "Screenshot preview")}">` : `<div><b>${state.entryMode === "image" ? text("选择付款或聊天截图", "Choose a payment or chat screenshot") : text("需要的话，加一张截图", "Add a screenshot if useful")}</b><span>${text("只选择这一张图片，不读取整个相册", "Only the selected image is used; the whole album is never read")}<br>${text("原型压缩后仅存于当前浏览器", "The compressed image stays in this browser")}</span></div>`}
+      ${state.entryMode === "gift" ? "" : `<div class="choice-question compact-question"><label>${text("选个类目就行", "Choose a category")}</label><div class="category-grid">${categories.map(([value,label]) => `<button class="category-button ${d.category === value ? "active" : ""}" data-action="set-choice" data-field="category" data-value="${value}"><i>${categoryIcon(value)}</i>${label}</button>`).join("")}</div></div>`}
+      ${needsImage ? `<label class="upload-zone compact-upload" for="receiptFile">
+        ${d.image ? `<img src="${d.image}" alt="${text("图片预览", "Image preview")}">` : `<div><b>${state.entryMode === "receipt" ? text("拍摄或选择一张小票", "Take or choose a receipt") : text("选择付款或聊天截图", "Choose a payment or chat screenshot")}</b><span>${text("只处理你主动选择的图片，不读取整个相册", "Only the image you select is processed; the whole album is never read")}<br>${text("原型压缩后仅存于当前浏览器", "The compressed image stays in this browser")}</span></div>`}
       </label>
-      <input id="receiptFile" type="file" accept="image/*" hidden>
+      <input id="receiptFile" type="file" accept="image/*" ${state.entryMode === "receipt" ? 'capture="environment"' : ""} hidden>` : ""}
       ${d.category === "transfer" ? `<div class="form-field"><label>${text("转账附言（可不填）", "Transfer memo (optional)")}</label><input data-draft="transferMemo" value="${escapeHTML(d.transferMemo)}" placeholder="${text("例如：临时周转、房租、生日礼物", "e.g. short-term help, rent, birthday gift")}"></div>` : ""}
       <div class="form-field"><label>${text("给自己留一句话（可不填）", "One sentence for yourself (optional)")}</label><textarea rows="3" data-draft="note" placeholder="${text("发生了什么，按你自己的话记下来就好", "What happened, in your own words")}">${escapeHTML(d.note)}</textarea></div>
       <p class="recording-nudge">${text("不必现在给这笔钱下结论。先把真实发生的事留下来。", "You do not need to decide what this money means now. Save what happened first.")}</p>
@@ -592,52 +598,6 @@ function renderAddModal() {
     root.innerHTML = `<div class="modal-backdrop"><div class="modal-card"><div class="modal-head"><h3>${text("快速记一笔", "Quick entry")}</h3><button class="close-button" data-action="close-modal">×</button></div>${simpleBody}<div class="modal-actions"><button class="primary-button" data-action="save-record">${text("保存记录", "Save record")}</button></div></div></div>`;
     return;
   }
-  let body = "";
-  if (state.addStep === 1) body = `
-    <div class="step-indicator"><span class="active"></span><span></span><span></span></div>
-    ${state.entryMode === "image" ? `<label class="upload-zone" for="receiptFile">
-      ${d.image ? `<img src="${d.image}" alt="截图预览">` : `<div><b>上传付款或聊天截图</b><span>原型会压缩后仅存于当前浏览器<br>识别功能暂以人工核对字段代替</span></div>`}
-    </label>
-    <input id="receiptFile" type="file" accept="image/*" hidden>` : `<div class="source-banner">文字记录 · 先写下事实，后面再判断它的性质</div>`}
-    <div class="form-grid" style="margin-top:14px">
-      <div class="form-field"><label>金额</label><input data-draft="amount" type="number" min="0" step="0.01" value="${escapeHTML(d.amount)}" placeholder="0.00"></div>
-      <div class="form-field"><label>日期</label><input data-draft="date" type="date" value="${d.date}"></div>
-    </div>
-    <div class="form-field"><label>这笔钱是做什么的？</label><input data-draft="title" value="${escapeHTML(d.title)}" placeholder="例如：帮对方临时周转"></div>
-    <div class="form-grid">
-      <div class="form-field"><label>涉及谁</label><input data-draft="counterparty" value="${escapeHTML(d.counterparty)}" placeholder="对方昵称"></div>
-      <div class="form-field"><label>谁付款</label><select data-draft="payer"><option value="me" ${d.payer === "me" ? "selected" : ""}>我付款</option><option value="other" ${d.payer === "other" ? "selected" : ""}>对方付款</option></select></div>
-    </div>
-    <p class="recording-nudge">不必勉强自己记每一笔小钱。大额、连续单方付款，或让你不舒服的支出，更值得留下。</p>
-  `;
-  if (state.addStep === 2) body = `
-    <div class="step-indicator"><span class="active"></span><span class="active"></span><span></span></div>
-    ${state.entryMode === "wechat" ? `<div class="source-banner">微信同步示例 · ${escapeHTML(d.title)} · ¥${money(d.amount)} · ${formatDate(d.date)}</div>` : ""}
-    <div class="relation-legal-note"><b>当前关系：${escapeHTML(relationshipById(d.relationshipId).name)} · ${relationshipTypeLabel(relationshipById(d.relationshipId).type)}</b><p>${relationshipLegalHint(relationshipById(d.relationshipId).type)}</p></div>
-    <div class="choice-question"><label>这笔钱主要是谁实际使用或受益？</label><div class="choice-row">${choiceButtons("beneficiary", [["both","共同"],["other","对方"],["self","自己"]], d.beneficiary)}</div></div>
-    <div class="choice-question"><label>付款时，你是否期待以后返还？</label><div class="choice-row">${choiceButtons("expectedReturn", [["yes","要返还"],["no","不用还"],["unclear","说不清"]], d.expectedReturn)}</div></div>
-    <div class="choice-question"><label>现在回头看，你的感受是？</label><div class="choice-row">${choiceButtons("feeling", [["worth","值得"],["normal","一般"],["regret","有点后悔"],["uneasy","心里没底"]], d.feeling)}</div></div>
-    <div class="form-field"><label>还想记下什么？（可选）</label><textarea rows="3" data-draft="note" placeholder="例如：当时对方说下个月还">${escapeHTML(d.note)}</textarea></div>
-    ${d.expectedReturn === "yes" ? `<div class="form-field"><label>期望还款日（可选）</label><input data-draft="dueDate" type="date" value="${d.dueDate}"></div>` : ""}
-  `;
-  if (state.addStep === 3) {
-    applyNature(d);
-    body = `
-      <div class="step-indicator"><span class="active"></span><span class="active"></span><span class="active"></span></div>
-      <div class="nature-result"><small>根据你刚才记录的事实</small><strong>暂记为：${d.nature}</strong><p>${natureExplanation(d)}</p></div>
-      <div class="detail-lines">
-        <div class="detail-line"><span>金额</span><b>¥${money(d.amount)}</b></div>
-        <div class="detail-line"><span>谁付款</span><b>${d.payer === "me" ? "你" : "对方"}</b></div>
-        <div class="detail-line"><span>主要受益</span><b>${({both:"共同",other:"对方",self:"自己"})[d.beneficiary]}</b></div>
-        <div class="detail-line"><span>返还期待</span><b>${({yes:"需要返还",no:"不用返还",unclear:"尚未说清"})[d.expectedReturn]}</b></div>
-        <div class="detail-line"><span>你的感受</span><b>${feelingLabel(d.feeling)}</b></div>
-      </div>
-      <p class="disclaimer">这只是记录分类，不是法律定性。若涉及争议，应结合聊天内容、转账事实、双方关系与后续履行综合判断。</p>
-      ${d.payer === "me" && Number(d.amount) >= Number(state.data.settings.singleLimit || 0) ? `<article class="self-respect-note"><b>尊重你自己</b><p>都是你的血汗钱，值得记录。你们是平等的主体，应该互相尊重；记录下来，就是对你自己付出的尊重。</p></article>` : ""}
-    `;
-  }
-  const firstTitle = state.entryMode === "image" ? "截图记一笔" : "文字记一笔";
-  root.innerHTML = `<div class="modal-backdrop"><div class="modal-card"><div class="modal-head"><h3>${[firstTitle, "这笔钱，对你意味着什么？", "先这样记下来"][state.addStep - 1]}</h3><button class="close-button" data-action="close-modal">×</button></div>${body}<div class="modal-actions">${state.addStep > 1 ? `<button class="secondary-button" data-action="prev-step">上一步</button>` : ""}<button class="primary-button" data-action="${state.addStep === 3 ? "save-record" : "next-step"}">${state.addStep === 3 ? "保存记录" : "继续"}</button></div></div></div>`;
 }
 
 function choiceButtons(field, choices, active) {
@@ -691,6 +651,9 @@ function syncDraftInputs() {
 function saveDraft() {
   syncDraftInputs();
   if (!Number(state.draft.amount) || Number(state.draft.amount) <= 0) return toast(text("先填一个正确金额", "Enter a valid amount first"));
+  if ((state.entryMode === "image" || state.entryMode === "receipt") && !state.draft.image) {
+    return toast(state.entryMode === "receipt" ? text("请先拍摄或选择一张小票", "Take or choose a receipt first") : text("请先选择一张截图", "Choose a screenshot first"));
+  }
   state.draft.amount = Number(state.draft.amount);
   const noteTitle = state.draft.transferMemo || state.draft.note;
   state.draft.title = state.draft.title || (noteTitle ? noteTitle.trim().slice(0, 36) : text(`${categoryLabel(state.draft.category)}记录`, `${categoryLabel(state.draft.category)} record`));
@@ -835,7 +798,7 @@ async function compressImage(file) {
   canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
   state.draft.image = canvas.toDataURL("image/jpeg", .76);
   renderAddModal();
-  toast(text("截图已加入，请核对金额和类目", "Screenshot added. Check the amount and category"));
+  toast(state.entryMode === "receipt" ? text("小票已加入，请核对金额和类目", "Receipt added. Check the amount and category") : text("截图已加入，请核对金额和类目", "Screenshot added. Check the amount and category"));
 }
 
 function fileToDataURL(file) {
@@ -1013,12 +976,12 @@ document.addEventListener("click", async event => {
   if (action === "open-entry-menu") openEntryMenu();
   if (action === "open-add-text") openAdd("text");
   if (action === "open-add-image") openAdd("image");
-  if (action === "open-wechat-sync") showWechatSync();
-  if (action === "sync-demo") startWechatDemo();
+  if (action === "open-add-receipt") openAdd("receipt");
+  if (action === "open-add-gift") openAdd("gift");
   if (action === "set-perspective") { state.perspective = target.dataset.perspective; render(); }
   if (action === "close-modal") closeModal();
   if (action === "next-step" && validateDraftStep()) { state.addStep += 1; renderAddModal(); }
-  if (action === "prev-step") { syncDraftInputs(); if (state.entryMode === "wechat" && state.addStep === 2) showWechatSync(); else { state.addStep -= 1; renderAddModal(); } }
+  if (action === "prev-step") { syncDraftInputs(); state.addStep -= 1; renderAddModal(); }
   if (action === "set-choice") { state.draft[target.dataset.field] = target.dataset.value; renderAddModal(); }
   if (action === "save-record") saveDraft();
   if (action === "set-filter") { state.filter = target.dataset.filter; render(); }
