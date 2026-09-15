@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        谢谢你愿意帮助“有来有往”变得更清楚、更克制。请勿提交真实姓名、账号、聊天截图、转账单号或其他敏感材料。
+        谢谢你愿意帮助“来而有往”变得更清楚、更克制。请勿提交真实姓名、账号、聊天截图、转账单号或其他敏感材料。
   - type: dropdown
     id: perspective
     attributes:

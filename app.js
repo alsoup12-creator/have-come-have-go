@@ -6,10 +6,13 @@ const state = {
   filter: "all",
   perspective: "self",
   relationshipScope: "all",
+  statsRange: "total",
   clarifySelected: [],
   clarifyMode: "direct",
   clarifyCategory: "all",
   clarifyMonth: "all",
+  consultationMessage: "",
+  consultationContextKey: "",
   language: localStorage.getItem(LANGUAGE_KEY) === "en" ? "en" : "zh",
   data: loadData(),
   draft: null,
@@ -28,7 +31,7 @@ const pageMeta = {
   }
 };
 
-const legalKnowledge = [
+const builtInLegalKnowledge = [
   {
     id: "loan-delivery", kindZh: "借款", kindEn: "Loans",
     titleZh: "自然人之间借款，通常从实际交付借款时成立",
@@ -68,14 +71,79 @@ const legalKnowledge = [
     sourceZh: "《中华人民共和国民法典》第657条",
     sourceEn: "PRC Civil Code, Article 657",
     url: "https://www.court.gov.cn/zixun/xiangqing/233181.html"
+  },
+  {
+    id: "marital-property", kindZh: "婚姻财产", kindEn: "Marital property",
+    titleZh: "婚后所得需要区分夫妻共同财产与一方个人财产",
+    titleEn: "Property acquired during marriage may be joint or separate property",
+    summaryZh: "《民法典》第1062条列举夫妻共同财产，第1063条列举一方个人财产。婚前财产、人身损害赔偿以及明确只归一方的遗嘱或赠与等，适用不同规则。",
+    summaryEn: "Civil Code Articles 1062 and 1063 distinguish property jointly owned by spouses from separate property, including premarital property and gifts expressly made to one spouse.",
+    sourceZh: "《中华人民共和国民法典》第1062条、第1063条",
+    sourceEn: "PRC Civil Code, Articles 1062 and 1063",
+    url: "https://wb.flk.npc.gov.cn/flfg/PDF/bd53dd912c1048f2aecbaa229238334b.pdf"
+  },
+  {
+    id: "marital-debt", kindZh: "夫妻债务", kindEn: "Marital debt",
+    titleZh: "婚内一方负债，不当然都是夫妻共同债务",
+    titleEn: "A debt incurred by one spouse is not automatically a joint debt",
+    summaryZh: "《民法典》第1064条区分共同意思表示、家庭日常生活需要所负债务，以及超出家庭日常生活需要的一方个人名义债务；是否属于共同债务仍需结合用途和证据判断。",
+    summaryEn: "Civil Code Article 1064 distinguishes jointly agreed debts and ordinary family expenses from debts incurred individually beyond daily family needs, subject to evidence about purpose and common intent.",
+    sourceZh: "《中华人民共和国民法典》第1064条",
+    sourceEn: "PRC Civil Code, Article 1064",
+    url: "https://wb.flk.npc.gov.cn/flfg/PDF/bd53dd912c1048f2aecbaa229238334b.pdf"
+  },
+  {
+    id: "marital-property-agreement", kindZh: "财产约定", kindEn: "Property agreement",
+    titleZh: "夫妻可以书面约定婚前及婚内财产归属",
+    titleEn: "Spouses may make a written agreement on property ownership",
+    summaryZh: "《民法典》第1065条允许双方书面约定婚前财产和婚姻关系存续期间所得财产分别所有、共同所有或部分分别、部分共同所有。",
+    summaryEn: "Civil Code Article 1065 allows spouses to make a written agreement that premarital and marital property will be owned separately, jointly, or in a combination of both.",
+    sourceZh: "《中华人民共和国民法典》第1065条",
+    sourceEn: "PRC Civil Code, Article 1065",
+    url: "https://wb.flk.npc.gov.cn/flfg/PDF/bd53dd912c1048f2aecbaa229238334b.pdf"
+  },
+  {
+    id: "cohabitation-property", kindZh: "同居财产", kindEn: "Cohabitation property",
+    titleZh: "未婚同居期间所得财产，不当然全部共同所有",
+    titleEn: "Property acquired during unmarried cohabitation is not automatically all joint",
+    summaryZh: "婚姻家庭编解释（二）第4条规定，双方均无配偶的同居关系析产，有约定的按约定；无约定且协商不成时，各自所得原则上各自所有，共同出资或无法区分的财产再结合出资、共同生活和贡献等因素处理。",
+    summaryEn: "Article 4 of Interpretation II provides that agreed terms govern property division between unmarried cohabitants; otherwise, separate earnings generally remain separate, while jointly funded or indistinguishable property is assessed using contribution and shared-life factors.",
+    sourceZh: "最高人民法院民法典婚姻家庭编解释（二）第4条",
+    sourceEn: "SPC Interpretation II on the Marriage and Family Book, Article 4",
+    url: "https://www.court.gov.cn/zixun/xiangqing/452771.html"
+  },
+  {
+    id: "betrothal-gift-scope", kindZh: "彩礼", kindEn: "Betrothal gifts",
+    titleZh: "是否属于彩礼，要结合给付目的、习俗、时间、方式和价值判断",
+    titleEn: "Whether a transfer is a betrothal gift depends on purpose and context",
+    summaryZh: "涉彩礼司法解释第1至3条明确，彩礼是以婚姻为目的、依据习俗给付的财物；节日生日等时点价值不大的礼物、礼金和日常消费性支出等，一般不属于彩礼。",
+    summaryEn: "Articles 1 to 3 of the SPC rules address property given for marriage under local custom and exclude modest commemorative gifts and ordinary relationship expenses from the scope of betrothal gifts.",
+    sourceZh: "最高人民法院涉彩礼纠纷司法解释第1条至第3条",
+    sourceEn: "SPC Provisions on Betrothal Gift Disputes, Articles 1 to 3",
+    url: "https://gongbao.court.gov.cn/Details/d2fa08a82a91337bf6515842d1522e.html"
+  },
+  {
+    id: "betrothal-gift-return", kindZh: "彩礼返还", kindEn: "Return of betrothal gifts",
+    titleZh: "彩礼是否返还及返还多少，需要结合登记、共同生活和实际使用",
+    titleEn: "Return of betrothal gifts depends on registration, cohabitation, and actual use",
+    summaryZh: "涉彩礼司法解释第5条、第6条分别规定已登记且共同生活、未登记但已共同生活时的处理因素，包括共同生活时间、孕育情况、双方过错、彩礼实际使用及嫁妆等，不宜只凭是否登记作单一判断。",
+    summaryEn: "Articles 5 and 6 require a contextual assessment that may include marriage registration, duration of cohabitation, children or pregnancy, fault, actual use of the gift, and dowry circumstances.",
+    sourceZh: "最高人民法院涉彩礼纠纷司法解释第5条、第6条",
+    sourceEn: "SPC Provisions on Betrothal Gift Disputes, Articles 5 and 6",
+    url: "https://gongbao.court.gov.cn/Details/d2fa08a82a91337bf6515842d1522e.html"
   }
 ];
+
+const publisherLegalKnowledge = Array.isArray(window.PUBLISHER_LEGAL_KNOWLEDGE)
+  ? window.PUBLISHER_LEGAL_KNOWLEDGE.filter(item => item && item.id && item.titleZh && item.summaryZh && item.sourceZh && item.url)
+  : [];
+const legalKnowledge = [...new Map([...builtInLegalKnowledge, ...publisherLegalKnowledge].map(item => [item.id, item])).values()];
 
 function en() { return state.language === "en"; }
 function text(zh, english) { return en() ? english : zh; }
 
 function displayRelationName(relation) {
-  return en() && relation.id === "demo-relation" && relation.name === "她" ? "Her" : relation.name;
+  return en() && relation.id === "demo-relation" && relation.name === "对方" ? "The other person" : relation.name;
 }
 
 function displayRecordTitle(record) {
@@ -90,30 +158,20 @@ function displayRecordTitle(record) {
 function applyStaticLocale() {
   const content = en() ? {
     name: "Give & Take", tagline: "A private relationship spending journal",
-    headline: "Love can be emotional.<br>Money deserves clarity.",
-    intro: "An English interface for cross-border relationships, grounded in PRC law. Keep the facts, notice long-term patterns, and clarify important money when you are ready.",
-    points: ["Record meaningful relationship spending", "Add a note, screenshot, receipt, or gift", "Receive calm, factual reminders"],
+    headline: "Every contribution you make<br>deserves respect.",
+    intro: "Keep the facts. Receive a neutral reminder when an amount or payment pattern reaches the line you set. What happens next remains your choice.",
+    points: ["Record what you contributed", "Notice amounts and recurring patterns", "Choose for yourself what happens next"],
     local: "Prototype data stays in this browser", nav: ["Today", "Records", "Clarify", "Me"], privacy: "Privacy", add: "Choose how to record"
   } : {
-    name: "有来有往", tagline: "关系支出自我觉察工具", headline: "爱可以感性，<br>钱最好清醒。",
-    intro: "这不是共同账本。它只帮助你留下事实、看清长期的付出，并把重要的钱及时说清楚。",
-    points: ["记录一笔关系支出", "留文字、截图、小票或礼物", "得到克制而明确的提醒"],
+    name: "来而有往", tagline: "关系付出记录与提醒", headline: "你的每一份付出，<br>都值得被尊重。",
+    intro: "只记录事实，只在额度、次数或持续月份达到你设定的提醒线时提示。如何理解、是否行动，都由你决定。",
+    points: ["记录自己的付出", "看见额度与持续模式", "自主决定下一步"],
     local: "初版数据仅保存在当前浏览器中", nav: ["今天", "记录", "说清", "我的"], privacy: "隐私说明", add: "选择记录方式"
   };
-  const relation = scopedRelationship();
-  if (!relation) {
-    content.headline = text("每段关系都不同，<br>自己的付出要看得见。", "Every relationship differs.<br>Your effort should still be visible.");
-  } else if (relation.type === "friend") {
-    content.headline = text("情分可以深，<br>往来要清醒。", "Friendship can run deep.<br>Keep the dealings clear.");
-  } else if (["dating", "matchmaking", "ambiguous"].includes(relation.type)) {
-    content.headline = text("关系可以慢慢走，<br>付出要看得见。", "Let the relationship unfold.<br>Keep your effort visible.");
-  } else if (relation.type === "spouse") {
-    content.headline = text("日子一起过，<br>承担要看得见。", "Build a life together.<br>Keep responsibility visible.");
-  }
   document.documentElement.lang = en() ? "en" : "zh-CN";
-  document.title = en() ? "Give & Take · Prototype" : "有来有往 · 初版原型";
+  document.title = en() ? "Give & Take · Prototype" : "来而有往 · 初版原型";
   document.getElementById("brandName").textContent = content.name;
-  document.querySelector(".brand-mark").textContent = en() ? "G" : "有";
+  document.querySelector(".brand-mark").textContent = en() ? "G" : "来";
   document.getElementById("brandTagline").textContent = content.tagline;
   document.getElementById("brandHeadline").innerHTML = content.headline;
   document.getElementById("brandIntro").textContent = content.intro;
@@ -126,14 +184,21 @@ function applyStaticLocale() {
   privacyButton.textContent = en() ? "P" : "私";
   privacyButton.setAttribute("aria-label", content.privacy);
   document.querySelector('[data-action="open-entry-menu"]').setAttribute("aria-label", content.add);
-  document.querySelector(".phone-frame").setAttribute("aria-label", en() ? "Give & Take prototype" : "有来有往原型");
+  document.querySelector(".phone-frame").setAttribute("aria-label", en() ? "Give & Take prototype" : "来而有往原型");
   document.querySelector(".bottom-nav").setAttribute("aria-label", en() ? "Main navigation" : "主导航");
+}
+
+function localDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function offsetDate(days) {
   const d = new Date();
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return localDateString(d);
 }
 
 function defaultData() {
@@ -142,21 +207,21 @@ function defaultData() {
   const ambiguousId = "demo-ambiguous";
   return {
     demoVersion: 2,
-    settings: { monthlyLimit: 12000, yearlyLimit: 100000, singleLimit: 5000, lawyerLine: 30000, notificationsEnabled: false, inactivityDays: 30, lastInactivityNotices: {} },
+    settings: { monthlyLimit: 12000, yearlyLimit: 100000, singleLimit: 5000, lawyerLine: 30000, oneSidedCountLimit: 3, oneSidedMonthLimit: 3, notificationsEnabled: false, inactivityDays: 30, lastInactivityNotices: {} },
     activeRelationshipId: relationId,
     relationships: [
-      { id: relationId, name: "她", type: "lover", startDate: offsetDate(-120), note: "演示关系" },
+      { id: relationId, name: "对方", type: "lover", startDate: offsetDate(-120), note: "演示关系" },
       { id: friendId, name: "老周", type: "friend", startDate: offsetDate(-300), note: "演示关系" },
       { id: ambiguousId, name: "小陈", type: "ambiguous", startDate: offsetDate(-50), note: "演示关系" }
     ],
     records: [
-      { id: uid(), relationshipId: relationId, date: offsetDate(-2), title: "一起吃晚餐", category: "dining", transferMemo: "", counterparty: "她", amount: 680, payer: "me", nature: "支出记录", note: "这次一起吃晚餐。", dueDate: "", status: "recorded", image: "", source: "text" },
-      { id: uid(), relationshipId: relationId, date: offsetDate(-5), title: "周末出行车票", category: "travel", transferMemo: "", counterparty: "她", amount: 1250, payer: "me", nature: "支出记录", note: "周末出行的车票。", dueDate: "", status: "recorded", image: "", source: "text" },
-      { id: uid(), relationshipId: relationId, date: offsetDate(-8), title: "送给对方的手机", category: "gift", transferMemo: "生日礼物", counterparty: "她", amount: 6999, payer: "me", nature: "支出记录", note: "送给她的手机。", dueDate: "", status: "recorded", image: "", source: "gift" },
-      { id: uid(), relationshipId: relationId, date: offsetDate(-12), title: "临时周转转账", category: "transfer", transferMemo: "临时周转", counterparty: "她", amount: 20000, payer: "me", nature: "待确认", note: "对方说过以后处理，但没有明确日期。", dueDate: "", status: "pending", image: "", source: "text" },
+      { id: uid(), relationshipId: relationId, date: offsetDate(-2), title: "一起吃晚餐", category: "dining", transferMemo: "", counterparty: "对方", amount: 680, payer: "me", nature: "支出记录", note: "这次一起吃晚餐。", dueDate: "", status: "recorded", image: "", source: "text" },
+      { id: uid(), relationshipId: relationId, date: offsetDate(-5), title: "周末出行车票", category: "travel", transferMemo: "", counterparty: "对方", amount: 1250, payer: "me", nature: "支出记录", note: "周末出行的车票。", dueDate: "", status: "recorded", image: "", source: "text" },
+      { id: uid(), relationshipId: relationId, date: offsetDate(-8), title: "送给对方的手机", category: "gift", transferMemo: "生日礼物", counterparty: "对方", amount: 6999, payer: "me", nature: "支出记录", note: "送给对方的手机。", dueDate: "", status: "recorded", image: "", source: "gift" },
+      { id: uid(), relationshipId: relationId, date: offsetDate(-12), title: "临时周转转账", category: "transfer", transferMemo: "临时周转", counterparty: "对方", amount: 20000, payer: "me", nature: "支出记录", note: "对方说过以后处理，但没有明确日期。", dueDate: "", status: "recorded", image: "", source: "text" },
       { id: uid(), relationshipId: friendId, date: offsetDate(-4), title: "朋友生日礼物", category: "gift", transferMemo: "", counterparty: "老周", amount: 1800, payer: "me", nature: "支出记录", note: "生日送的耳机。", dueDate: "", status: "recorded", image: "", source: "gift" },
       { id: uid(), relationshipId: friendId, date: offsetDate(-11), title: "演出门票", category: "gift", transferMemo: "", counterparty: "老周", amount: 1200, payer: "me", nature: "支出记录", note: "又送了一次票。", dueDate: "", status: "recorded", image: "", source: "gift" },
-      { id: uid(), relationshipId: friendId, date: offsetDate(-16), title: "帮忙购买电脑", category: "transfer", transferMemo: "帮买电脑", counterparty: "老周", amount: 8200, payer: "me", nature: "待确认", note: "还没有说是否需要返还。", dueDate: "", status: "pending", image: "", source: "text" },
+      { id: uid(), relationshipId: friendId, date: offsetDate(-16), title: "帮忙购买电脑", category: "transfer", transferMemo: "帮买电脑", counterparty: "老周", amount: 8200, payer: "me", nature: "支出记录", note: "还没有说是否需要返还。", dueDate: "", status: "recorded", image: "", source: "text" },
       { id: uid(), relationshipId: ambiguousId, date: offsetDate(-6), title: "周末晚餐", category: "dining", transferMemo: "", counterparty: "小陈", amount: 980, payer: "me", nature: "支出记录", note: "一起吃饭。", dueDate: "", status: "recorded", image: "", source: "text" }
     ]
   };
@@ -165,7 +230,7 @@ function defaultData() {
 function emptyData() {
   const relationId = "empty-relation";
   return {
-    settings: { monthlyLimit: 12000, yearlyLimit: 100000, singleLimit: 5000, lawyerLine: 30000, notificationsEnabled: false, inactivityDays: 30, lastInactivityNotices: {} },
+    settings: { monthlyLimit: 12000, yearlyLimit: 100000, singleLimit: 5000, lawyerLine: 30000, oneSidedCountLimit: 3, oneSidedMonthLimit: 3, notificationsEnabled: false, inactivityDays: 30, lastInactivityNotices: {} },
     activeRelationshipId: relationId,
     relationships: [
       { id: relationId, name: "—", type: "lover", startDate: "", note: "" }
@@ -195,19 +260,30 @@ function normalizeData(data) {
   if (isUntouchedLegacyDemo) return defaultData();
   data.settings = data.settings || {};
   if (!Object.prototype.hasOwnProperty.call(data.settings, "yearlyLimit")) data.settings.yearlyLimit = 100000;
+  if (!Object.prototype.hasOwnProperty.call(data.settings, "oneSidedCountLimit")) data.settings.oneSidedCountLimit = 3;
+  if (!Object.prototype.hasOwnProperty.call(data.settings, "oneSidedMonthLimit")) data.settings.oneSidedMonthLimit = 3;
   if (typeof data.settings.notificationsEnabled !== "boolean") data.settings.notificationsEnabled = false;
   if (!Number(data.settings.inactivityDays)) data.settings.inactivityDays = 30;
   if (!data.settings.lastInactivityNotices || typeof data.settings.lastInactivityNotices !== "object") data.settings.lastInactivityNotices = {};
   if (!Array.isArray(data.relationships) || !data.relationships.length) {
-    data.relationships = [{ id: "migrated-relation", name: "她", type: "lover", startDate: "", note: "" }];
+    data.relationships = [{ id: "migrated-relation", name: "对方", type: "lover", startDate: "", note: "" }];
   }
+  data.relationships.forEach(relation => {
+    if (relation.id === "demo-relation" && relation.name === "她") relation.name = "对方";
+  });
   if (!data.activeRelationshipId || !data.relationships.some(r => r.id === data.activeRelationshipId)) data.activeRelationshipId = data.relationships[0].id;
   data.records = Array.isArray(data.records) ? data.records : [];
   data.records.forEach(record => {
     if (!record.relationshipId) record.relationshipId = data.activeRelationshipId;
+    if (record.relationshipId === "demo-relation" && record.counterparty === "她") record.counterparty = "对方";
+    if (record.relationshipId === "demo-relation" && record.note === "送给她的手机。") record.note = "送给对方的手机。";
     if (!record.category) record.category = inferCategory(record);
     if (typeof record.transferMemo !== "string") record.transferMemo = "";
     if (!record.payer) record.payer = "me";
+    if (record.status === "pending" && record.nature === "待确认") {
+      record.status = "recorded";
+      record.nature = "支出记录";
+    }
   });
   return data;
 }
@@ -226,7 +302,7 @@ function activeRelationship() {
 }
 
 function isRelationshipOverviewPage() {
-  return state.page === "clarify" || state.page === "me";
+  return state.page === "me";
 }
 
 function scopedRelationship() {
@@ -279,12 +355,12 @@ function money(value) {
 }
 
 function monthRecords() {
-  const month = new Date().toISOString().slice(0, 7);
+  const month = localDateString().slice(0, 7);
   return activeRecords().filter(r => r.date.startsWith(month));
 }
 
 function yearRecords() {
-  const year = new Date().toISOString().slice(0, 4);
+  const year = localDateString().slice(0, 4);
   return activeRecords().filter(r => r.date.startsWith(year));
 }
 
@@ -296,8 +372,13 @@ function myYearSpend() {
   return yearRecords().reduce((sum, r) => sum + Number(r.amount), 0);
 }
 
+function reachesSingleReminder(record) {
+  const singleLimit = Number(state.data.settings.singleLimit || 0);
+  return singleLimit > 0 && Number(record.amount || 0) >= singleLimit;
+}
+
 function pendingRecords() {
-  return activeRecords().filter(r => (r.status === "pending" || r.nature === "借款") && r.status !== "settled");
+  return activeRecords().filter(reachesSingleReminder);
 }
 
 function pendingAmount() {
@@ -321,12 +402,12 @@ function daysSince(date) {
   if (Number.isNaN(start.getTime())) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  return Math.max(0, Math.floor((today - start) / 86400000));
+  const elapsed = Math.floor((today - start) / 86400000);
+  return elapsed < 0 ? null : elapsed;
 }
 
 function inactivityState(relation = activeRelationship()) {
-  const latest = state.data.records
-    .filter(r => r.relationshipId === relation.id)
+  const latest = recordsForRelationship(relation.id)
     .map(r => r.date)
     .filter(Boolean)
     .sort((a, b) => b.localeCompare(a))[0];
@@ -337,7 +418,7 @@ function inactivityState(relation = activeRelationship()) {
 }
 
 function relationshipMonthRecords(relationId) {
-  const month = new Date().toISOString().slice(0, 7);
+  const month = localDateString().slice(0, 7);
   return recordsForRelationship(relationId).filter(record => record.date.startsWith(month));
 }
 
@@ -346,7 +427,7 @@ function relationshipMonthSpend(relationId) {
 }
 
 function relationshipYearRecords(relationId) {
-  const year = new Date().toISOString().slice(0, 4);
+  const year = localDateString().slice(0, 4);
   return recordsForRelationship(relationId).filter(record => record.date.startsWith(year));
 }
 
@@ -354,20 +435,66 @@ function relationshipYearSpend(relationId) {
   return relationshipYearRecords(relationId).reduce((sum, record) => sum + Number(record.amount), 0);
 }
 
+function relationshipTotalSpend(relationId) {
+  return recordsForRelationship(relationId).reduce((sum, record) => sum + Number(record.amount), 0);
+}
+
+function compactMoney(value) {
+  const amount = Number(value || 0);
+  if (en()) return amount >= 1000 ? `${Number((amount / 1000).toFixed(amount >= 10000 ? 0 : 1))}k` : money(amount);
+  return amount >= 10000 ? `${Number((amount / 10000).toFixed(amount >= 100000 ? 0 : 1))}万` : money(amount);
+}
+
+function relationshipYears(relationId) {
+  return [...new Set(recordsForRelationship(relationId)
+    .map(record => String(record.date || "").slice(0, 4))
+    .filter(year => /^\d{4}$/.test(year)))]
+    .sort((a, b) => b.localeCompare(a));
+}
+
+function renderVerticalBars(items, className = "") {
+  const maxAmount = Math.max(0, ...items.map(item => Number(item.amount || 0)));
+  return `<div class="vertical-chart ${className}">${items.map(item => {
+    const amount = Number(item.amount || 0);
+    const height = maxAmount > 0 ? Math.max(amount > 0 ? 7 : 2, Math.round(amount / maxAmount * 100)) : 2;
+    const action = item.relationshipId ? ` data-action="set-relationship-scope" data-id="${item.relationshipId}"` : "";
+    return `<button class="chart-column"${action} title="${escapeHTML(item.fullLabel || item.label)}：¥${money(amount)}">
+      <span class="chart-value">${compactMoney(amount)}</span>
+      <span class="chart-track"><i style="height:${height}%"></i></span>
+      <b>${escapeHTML(item.label)}</b>
+      ${item.detail ? `<small>${escapeHTML(item.detail)}</small>` : ""}
+    </button>`;
+  }).join("")}</div>`;
+}
+
+function consecutivePaymentMonths(relationId) {
+  const monthsWithPayments = new Set(recordsForRelationship(relationId).map(record => String(record.date || "").slice(0, 7)));
+  const cursor = new Date();
+  cursor.setDate(1);
+  let count = 0;
+  while (true) {
+    const month = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
+    if (!monthsWithPayments.has(month)) break;
+    count += 1;
+    cursor.setMonth(cursor.getMonth() - 1);
+  }
+  return count;
+}
+
 function relationshipBoundaryAlert(relation) {
-  if (!relation || !["friend", "dating", "matchmaking", "ambiguous"].includes(relation.type)) return null;
-  const recent = recordsForRelationship(relation.id).filter(record => {
-    const elapsed = daysSince(record.date);
-    return elapsed !== null && elapsed <= 45;
-  });
-  const gifts = recent.filter(record => record.category === "gift");
-  const singleLimit = Number(state.data.settings.singleLimit || 0);
-  const large = singleLimit > 0 ? recent.filter(record => Number(record.amount) >= singleLimit) : [];
-  if (gifts.length < 2 && !large.length) return null;
+  if (!relation) return null;
   const reasons = [];
-  if (gifts.length >= 2) reasons.push(text(`45天内连续记录了 ${gifts.length} 次送礼`, `${gifts.length} gifts recorded within 45 days`));
-  if (large.length) reasons.push(text(`${large.length} 笔达到大额提醒线`, `${large.length} payment${large.length === 1 ? "" : "s"} reached the large-payment line`));
-  return { relation, reasons, amount: recent.reduce((sum, record) => sum + Number(record.amount), 0) };
+  const countLimit = Number(state.data.settings.oneSidedCountLimit || 0);
+  const recentPayments = recordsForRelationship(relation.id).filter(record => {
+    const elapsed = daysSince(record.date);
+    return elapsed !== null && elapsed <= 30;
+  });
+  if (countLimit > 0 && recentPayments.length >= countLimit) reasons.push(text(`最近30天连续记录了 ${recentPayments.length} 次自己的付款`, `${recentPayments.length} of your payments were recorded in the last 30 days`));
+  const monthLimit = Number(state.data.settings.oneSidedMonthLimit || 0);
+  const monthStreak = consecutivePaymentMonths(relation.id);
+  if (monthLimit > 0 && monthStreak >= monthLimit) reasons.push(text(`已连续 ${monthStreak} 个月留下自己的付款记录`, `Your payments were recorded for ${monthStreak} consecutive months`));
+  if (!reasons.length) return null;
+  return { relation, reasons };
 }
 
 function boundaryAlertsForScope() {
@@ -378,18 +505,14 @@ function boundaryAlertsForScope() {
 function relationSelfCopy(relation) {
   if (!relation) return {
     hero: text("本月全部关系支出", "This month's spending across relationships"),
-    principleTitle: text("先看见自己的全部付出", "See the full picture of what you gave"),
-    principleBody: text("这里汇总所有关系中的主动记录。点击上方任一关系，可以只看那段关系的金额、频率和需要说清的事项。", "This brings together your entries across relationships. Choose one above to focus on its amount, frequency, and matters to clarify.")
+    principleTitle: text("你的每一份付出，都值得被尊重", "Every contribution you make deserves respect"),
+    principleBody: text("这里汇总你记录下来的事实，并在达到自设提醒线时提示。它不评价关系，也不替你决定。", "This brings together the facts you recorded and alerts you when a line you set is reached. It does not judge the relationship or decide for you.")
   };
-  const copy = {
-    friend: ["这段友谊中，本月由你承担", "朋友之间也可以有清楚的边界", "真正的朋友不会把照顾当作理所当然。记录不是计较，只是看见自己长期承担了什么。"],
-    dating: ["这段约会中，本月由你承担", "关系还在了解，投入可以慢一点", "在关系尚未稳定时，看见金额和频率，可以帮助你判断这是否仍是自己愿意的节奏。"],
-    matchmaking: ["这段相亲关系中，本月由你承担", "关系还在了解，投入不必超前", "相亲阶段的支出与礼物应当和关系进展相匹配。先记录事实，再决定要不要继续。"],
-    ambiguous: ["这段关系中，本月由你承担", "关系没有说清，付出更要看清", "暧昧可以保留空间，但大额付款和连续送礼不应在含糊中变成默认。"],
-    lover: ["这段感情中，本月由你承担", "记录下来，是对自己付出的尊重", "不必记录每一笔小钱。更值得留下的是单笔较大、长期单方面付款，或让你心里没底的支出。"],
-    spouse: ["共同生活中，本月由你承担", "共同生活，也要看见彼此承担", "家庭支出未必需要逐笔计算，但长期由一方承担的金额、重大给付和财产安排值得留下。"]
-  }[relation.type] || ["本月由你承担", "记录下来，是对自己付出的尊重", "不必记录每一笔小钱，重要的付出值得留下。"];
-  return { hero: text(copy[0], "Paid by you this month"), principleTitle: text(copy[1], "Keeping a record respects what you contributed"), principleBody: text(copy[2], "Keep the larger payments, repeated patterns, and facts that may matter later.") };
+  return {
+    hero: text("这段关系中，本月由你支付", "Paid by you in this relationship this month"),
+    principleTitle: text("你的每一份付出，都值得被尊重", "Every contribution you make deserves respect"),
+    principleBody: text("这里只呈现你记录下来的金额、次数和持续时间。达到提醒线时，它会安静地告诉你；是否关注、是否行动，由你决定。", "This shows only the amounts, counts, and duration you recorded. When a line is reached, it tells you quietly; attention and action remain your choice.")
+  };
 }
 
 function natureIcon(nature) {
@@ -417,9 +540,51 @@ function render({ preserveScroll = false } = {}) {
   document.getElementById("pageTitle").textContent = title;
   document.getElementById("todayLabel").textContent = state.page === "home" ? fullDate() : dateLabel;
   document.querySelectorAll(".nav-item").forEach(btn => btn.classList.toggle("active", btn.dataset.page === state.page));
-  view.innerHTML = renderRelationshipStrip() + ({ home: renderHome, records: renderRecords, clarify: renderClarify, me: renderMe })[state.page]();
+  const relationshipStrip = state.page === "me" ? "" : renderRelationshipStrip();
+  view.innerHTML = relationshipStrip + ({ home: renderHome, records: renderRecords, clarify: renderClarify, me: renderMe })[state.page]();
   view.scrollTop = preserveScroll ? previousScrollTop : 0;
   maybeNotifyInactive();
+}
+
+function renderMeRelationshipStats(relations) {
+  const scope = scopedRelationship();
+  if (!scope) {
+    const total = relations.reduce((sum, relation) => sum + relationshipTotalSpend(relation.id), 0);
+    const items = relations.map(relation => ({
+      label: displayRelationName(relation),
+      fullLabel: `${displayRelationName(relation)} · ${relationshipTypeLabel(relation.type)}`,
+      detail: relationshipTypeLabel(relation.type),
+      amount: relationshipTotalSpend(relation.id),
+      relationshipId: relation.id
+    }));
+    return `<section class="relationship-overview">
+      <div class="relationship-overview-head"><div><b>${text("关系总览", "Relationship overview")}</b><span>${text("累计支出比较 · 点击柱子查看单段关系", "All-time comparison · Choose a bar for details")}</span></div><div><button data-action="open-relationships">${text("管理", "Manage")}</button><button data-action="open-new-relationship">＋ ${text("新建", "New")}</button></div></div>
+      <div class="relationship-chart-card">
+        <button class="relationship-chart-total active" data-action="set-relationship-scope" data-id="all"><span>${text(`${relations.length} 段关系累计`, `${relations.length} relationships total`)}</span><strong>¥${money(total)}</strong></button>
+        ${renderVerticalBars(items, "relationship-bars")}
+      </div>
+    </section>`;
+  }
+
+  const years = relationshipYears(scope.id);
+  const range = state.statsRange === "total" || years.includes(state.statsRange) ? state.statsRange : "total";
+  const records = recordsForRelationship(scope.id);
+  const chartItems = range === "total"
+    ? [...years].reverse().map(year => ({ label: year, amount: records.filter(record => record.date.startsWith(year)).reduce((sum, record) => sum + Number(record.amount), 0) }))
+    : Array.from({ length: 12 }, (_, index) => {
+      const month = `${range}-${String(index + 1).padStart(2, "0")}`;
+      return { label: text(`${index + 1}月`, new Intl.DateTimeFormat("en-US", { month: "short" }).format(new Date(`${month}-01T00:00:00`))), amount: records.filter(record => record.date.startsWith(month)).reduce((sum, record) => sum + Number(record.amount), 0) };
+    });
+  const chartTotal = chartItems.reduce((sum, item) => sum + item.amount, 0);
+  const rangeButtons = [`<button class="${range === "total" ? "active" : ""}" data-action="set-stats-range" data-range="total">${text("累计", "All time")}</button>`, ...years.map(year => `<button class="${range === year ? "active" : ""}" data-action="set-stats-range" data-range="${year}">${year}</button>`)].join("");
+  return `<section class="relationship-overview">
+    <div class="relationship-overview-head"><div><b>${escapeHTML(displayRelationName(scope))} · ${relationshipTypeLabel(scope.type)}</b><span>${text("单段关系统计", "Relationship detail")}</span></div><div><button data-action="set-relationship-scope" data-id="all">${text("全部", "All")}</button><button data-action="open-relationships">${text("管理", "Manage")}</button></div></div>
+    <div class="relationship-chart-card single-relationship-chart">
+      <div class="stats-range-tabs">${rangeButtons}</div>
+      <div class="relationship-chart-summary"><span>${range === "total" ? text("累计支出", "All-time spending") : text(`${range} 年支出`, `${range} spending`)}</span><strong>¥${money(chartTotal)}</strong><small>${range === "total" ? text("按年份比较", "Compared by year") : text("按月份比较", "Compared by month")}</small></div>
+      ${chartItems.length ? renderVerticalBars(chartItems, range === "total" ? "year-bars" : "month-bars") : `<div class="chart-empty">${text("这段关系还没有可统计的记录", "No records to chart yet")}</div>`}
+    </div>
+  </section>`;
 }
 
 function renderRelationshipStrip() {
@@ -436,6 +601,8 @@ function renderRelationshipStrip() {
       <button class="relationship-new" data-action="open-new-relationship">＋ ${text("新建关系", "New")}</button>
     </div>`;
   }
+  if (state.page === "me") return renderMeRelationshipStats(relations);
+
   const allSpend = relations.reduce((sum, relation) => sum + relationshipMonthSpend(relation.id), 0);
   const allYearSpend = relations.reduce((sum, relation) => sum + relationshipYearSpend(relation.id), 0);
   const cards = relations.map(relation => {
@@ -447,7 +614,7 @@ function renderRelationshipStrip() {
     </button>`;
   }).join("");
   return `<section class="relationship-overview">
-    <div class="relationship-overview-head"><div><b>${text("关系总览", "Relationship overview")}</b><span>${text("点一段关系看单独统计", "Choose one for its own statistics")}</span></div><div><button data-action="open-relationships">${text("管理", "Manage")}</button><button data-action="open-new-relationship">＋ ${text("新建", "New")}</button></div></div>
+    <div class="relationship-overview-head"><div><b>${text("关系总览", "Relationship overview")}</b><span>${text("点一段关系看单独统计", "Choose one for its own statistics")}</span></div></div>
     <div class="relationship-card-grid">
       <button class="relationship-scope-card all ${state.relationshipScope === "all" ? "active" : ""}" data-action="set-relationship-scope" data-id="all"><span class="relationship-card-top"><i>全</i><em>${text(`${relations.length} 段关系`, `${relations.length} relationships`)}</em></span><b>${text("全部关系", "All relationships")}</b><small>${text(`本月 ¥${money(allSpend)} · 本年 ¥${money(allYearSpend)}`, `Month ¥${money(allSpend)} · Year ¥${money(allYearSpend)}`)}</small></button>
       ${cards}
@@ -467,24 +634,22 @@ function renderHome() {
   const yearlyLimit = Number(state.data.settings.yearlyLimit || 0);
   const percent = limit > 0 ? Math.min(100, Math.round(spend / limit * 100)) : 0;
   const pending = pendingRecords().length;
-  const streak = consecutiveMine();
   const inactivity = relation ? inactivityState(relation) : null;
   const selfCopy = relationSelfCopy(relation);
   const latestPaid = relation ? [...activeRecords()].sort((a,b) => b.date.localeCompare(a.date))[0] : null;
   const idealResponse = state.perspective === "ideal" && relation ? `
     <div class="ideal-inline-response ${relation.type}" aria-live="polite">
-      <span>${text("如果这份付出被认真看见", "If this contribution were truly seen")}</span>
+      <span>${text("一种理想回应", "An ideal response")}</span>
       <p>“${escapeHTML(idealVoiceForRecord(latestPaid))}”</p>
-      <small>${latestPaid ? `${formatDate(latestPaid.date)} · ${escapeHTML(displayRecordTitle(latestPaid))}` : text("从一笔记录开始", "Start with one record")} · ${text("这是理想回应，不代表现实中的对方真的这样想", "An ideal response, not a claim about reality")}</small>
+      <small>${latestPaid ? `${formatDate(latestPaid.date)} · ${escapeHTML(displayRecordTitle(latestPaid))}` : text("从一笔记录开始", "Start with one record")} · ${text("这是中立的回应参照，不代表现实中的对方想法", "A neutral reference, not a claim about the other person's thoughts")}</small>
     </div>` : "";
   const insights = [];
 
-  if (limit > 0 && spend >= limit) insights.push(`<article class="insight-card peach" data-action="go-me"><div class="insight-top"><div><h4>${text("你已越过自己设置的本月提醒线", "You have crossed your monthly reminder line")}</h4><p>${text("不是说你花错了，只是想问：这是你原本愿意承担的程度吗？", "This does not mean you spent wrongly. Is this still what you meant to take on?")}</p></div><span class="arrow">›</span></div></article>`);
-  if (yearlyLimit > 0 && yearlySpend >= yearlyLimit) insights.push(`<article class="insight-card peach" data-action="go-me"><div class="insight-top"><div><h4>${text("你已越过自己设置的本年提醒线", "You have crossed your yearly reminder line")}</h4><p>${text(`今年这段关系中，你已记录 ¥${money(yearlySpend)}。停一下，看看这是否仍是你愿意的累计程度。`, `You have recorded ¥${money(yearlySpend)} in this relationship this year. Pause and consider whether this cumulative level still feels chosen.`)}</p></div><span class="arrow">›</span></div></article>`);
-  boundaryAlertsForScope().forEach(alert => insights.push(`<article class="insight-card quiet-alert" data-action="set-relationship-scope" data-id="${alert.relation.id}"><div class="insight-top"><div><h4>${text(`和${displayRelationName(alert.relation)}的关系，真的到这一步了吗？`, `Has your relationship with ${displayRelationName(alert.relation)} really reached this point?`)}</h4><p>${escapeHTML(alert.reasons.join("，"))}。${text("对方有过相应的付出吗？你从这段关系中得到了什么？先停一下看看。", "Has the other person contributed in return? What are you receiving from this relationship? Pause and take a look.")}</p></div><span class="arrow">›</span></div></article>`));
-  if (streak >= 3) insights.push(`<article class="insight-card sage" data-action="go-records"><div class="insight-top"><div><h4>${text(`最近30天，你记录了 ${streak} 次自己的支出`, `${streak} of your payments were recorded in the last 30 days`)}</h4><p>${text("不需要替对方记账，只需要问问自己：这样的频率仍然是你愿意的吗？对方有没有用其他方式回应？", "You do not need to keep the other person's accounts. Ask whether this pace still feels chosen, and whether care is being returned in other ways.")}</p></div><span class="arrow">›</span></div></article>`);
-  if (pending) insights.push(`<article class="insight-card amber" data-action="go-clarify"><div class="insight-top"><div><h4>${text(`${pending} 笔钱还没有说清楚`, `${pending} item${pending === 1 ? "" : "s"} may need clarification`)}</h4><p>${text("越早确认，越不需要在以后靠回忆争论。", "Clear facts early, so you do not have to argue from memory later.")}</p></div><span class="arrow">›</span></div></article>`);
-  if (state.data.settings.notificationsEnabled && inactivity?.due) insights.push(`<article class="insight-card quiet-alert" data-action="preview-inactivity"><div class="insight-top"><div><h4>${text("这段关系还在继续吗？", "Is this relationship still active?")}</h4><p>${text(`已经 ${inactivity.elapsed} 天没有留下记录。走散了，也是看清了；如果你仍在持续付出，请不要逃避对自己的审视。`, `No record for ${inactivity.elapsed} days. If you have moved apart, that is clarity too. If you are still giving, do not look away from the pattern.`)}</p></div><span class="arrow">›</span></div></article>`);
+  if (limit > 0 && spend >= limit) insights.push(`<article class="insight-card peach" data-action="go-reminder-setting" data-setting-target="monthlyLimit"><div class="insight-top"><div><h4>${text("本月支出已达到你设置的提醒线", "This month's spending reached the line you set")}</h4><p>${text(`当前记录为 ¥${money(spend)}。这里只提示累计金额，是否调整由你决定。`, `The current recorded total is ¥${money(spend)}. This is only an amount reminder; any adjustment remains your choice.`)}</p></div><span class="arrow">›</span></div></article>`);
+  if (yearlyLimit > 0 && yearlySpend >= yearlyLimit) insights.push(`<article class="insight-card peach" data-action="go-reminder-setting" data-setting-target="yearlyLimit"><div class="insight-top"><div><h4>${text("本年支出已达到你设置的提醒线", "This year's spending reached the line you set")}</h4><p>${text(`当前记录为 ¥${money(yearlySpend)}。这里只提示累计金额，是否调整由你决定。`, `The current recorded total is ¥${money(yearlySpend)}. This is only an amount reminder; any adjustment remains your choice.`)}</p></div><span class="arrow">›</span></div></article>`);
+  boundaryAlertsForScope().forEach(alert => insights.push(`<article class="insight-card quiet-alert" data-action="go-relationship-records" data-id="${alert.relation.id}"><div class="insight-top"><div><h4>${text("付款次数或持续月份已达到提醒线", "Payment count or duration reached the line you set")}</h4><p>${escapeHTML(alert.reasons.join("，"))}。${text("这里只呈现记录中的模式，是否关注由你决定。", "This only presents the pattern in your records; whether to act on it remains your choice.")}</p></div><span class="arrow">›</span></div></article>`));
+  if (pending) insights.push(`<article class="insight-card amber" data-action="go-clarify"><div class="insight-top"><div><h4>${text(`${pending} 笔支出达到单笔提醒线`, `${pending} payment${pending === 1 ? "" : "s"} reached your single-payment line`)}</h4><p>${text("金额到了你设定的范围，可以停一下，看看是否需要和对方说清。", "The amount reached the line you set. Pause and consider whether it should be clarified with the other person.")}</p></div><span class="arrow">›</span></div></article>`);
+  if (state.data.settings.notificationsEnabled && inactivity?.due) insights.push(`<article class="insight-card quiet-alert" data-action="preview-inactivity"><div class="insight-top"><div><h4>${text("已经一段时间没有新的记录", "There has been no new record for a while")}</h4><p>${text(`距离最近一次记录已经 ${inactivity.elapsed} 天。这只是一条时间间隔提醒，是否关注由你决定。`, `It has been ${inactivity.elapsed} days since the latest record. This is only a time-gap reminder; whether to act on it remains your choice.`)}</p></div><span class="arrow">›</span></div></article>`);
 
   return `
     ${renderPerspectiveSwitch()}
@@ -496,10 +661,9 @@ function renderHome() {
       <div class="hero-progress"><span style="width:${percent}%"></span></div>
       <div class="hero-foot"><span>${limit > 0 ? `${text("自设月度提醒线", "Your monthly line")} ¥${money(limit)}` : text("尚未设置月度提醒线", "No monthly line set")}</span><span>${limit > 0 ? `${percent}%` : "—"}</span></div>
     </section>
-    ${renderEntryGrid()}
     <article class="record-principle"><b>${selfCopy.principleTitle}</b><p>${selfCopy.principleBody}</p></article>
     <div class="section-head"><h3>${text("给此刻的你", "For you, right now")}</h3><button data-action="show-principle">${text("提醒原则", "Why reminders?")}</button></div>
-    ${insights.join("") || `<article class="insight-card sage"><h4>${text("目前没有需要特别提醒的事", "Nothing needs special attention right now")}</h4><p>${text("记录不是为了算计，而是为了不在情绪里忘记自己。", "This is not scorekeeping. It is a way to remember yourself clearly.")}</p></article>`}
+    ${insights.join("") || `<article class="insight-card sage"><h4>${text("目前没有记录达到提醒线", "No recorded value has reached a reminder line")}</h4><p>${text("提醒只在你设定的边界被触及时出现。", "Reminders appear only when a line you set is reached.")}</p></article>`}
     <div class="section-head"><h3>${text("最近记录", "Recent records")}</h3><button data-action="go-records">${text("查看全部", "View all")}</button></div>
     <div class="record-list">${renderRecordCards([...activeRecords()].sort((a,b) => b.date.localeCompare(a.date)).slice(0, 3))}</div>
   `;
@@ -523,34 +687,27 @@ function renderEntryGrid() {
   </div>`;
 }
 
-function idealPerspectiveLabel(relation) {
-  return ({
-    friend: text("好朋友会怎样回应", "A good friend's response"),
-    dating: text("如果约会被认真回应", "If the date responded with care"),
-    matchmaking: text("如果相亲对象认真回应", "If the introduced date responded"),
-    ambiguous: text("如果这份付出被看见", "If this effort were seen"),
-    lover: text(`理想中的${displayRelationName(relation)}`, "The ideal response"),
-    spouse: text("理想中的共同承担", "Ideal shared responsibility")
-  })[relation.type] || text("理想回应", "The ideal response");
+function idealPerspectiveLabel() {
+  return text("理想回应", "An ideal response");
 }
 
 function idealVoiceForRecord(record) {
   const relation = record ? relationshipById(record.relationshipId) : scopedRelationship() || activeRelationship();
   if (!record) return relation.type === "friend"
-    ? text("好朋友会默默记下你的照顾。真正的朋友不会把这一切当作理所当然。", "A good friend would quietly remember your care and never treat it as something owed.")
-    : text("你的付出不是理所当然。认真回应你的人，会看见、记住，也愿意承担。", "Your contribution is not automatic. Someone responding with care would see it, remember it, and contribute too.");
+    ? text("我会记得你的照顾，也不会把它当作理所当然。", "I would remember your care and not take it for granted.")
+    : text("我会看见并尊重你的付出，也愿意认真回应。", "I would see and respect what you contributed, and respond with care.");
   if (relation.type === "friend") {
-    if (record.category === "gift") return text("好朋友会默默记下这份礼物。真正的朋友不会当作理所当然，我也想在合适的时候认真回应。", "A good friend would remember this gift and never take it for granted. I want to respond thoughtfully too.");
-    if (record.category === "transfer") return text("你愿意在我需要时帮忙，我应该主动把这笔钱怎么安排说清楚。真正的朋友不会让信任一直悬着。", "You helped when I needed it. A real friend should clarify the arrangement instead of leaving trust hanging.");
-    return text("今天又是你付钱。好朋友会记得彼此的照顾，下次该我来。", "You paid again today. A good friend remembers mutual care; next time should be my turn.");
+    if (record.category === "gift") return text("谢谢你准备这份礼物。我会记得这份心意，也愿意在合适的时候回应。", "Thank you for this gift. I would remember the care behind it and respond in time.");
+    if (record.category === "transfer") return text("谢谢你愿意承担这笔支出。我会认真记得，不把这份帮助当作理所当然。", "Thank you for taking on this payment. I would remember the help and not take it for granted.");
+    return text("今天是你付的钱。我会记得这份照顾，也愿意在下一次回应。", "You paid today. I would remember the care and respond next time.");
   }
-  if (["dating", "matchmaking"].includes(relation.type)) return text("我们还在了解彼此，你的投入不该被默认。我会认真记得，也会用行动回应。", "We are still getting to know each other. Your effort should not become the default; I would remember it and respond through my actions.");
-  if (relation.type === "ambiguous") return text("关系还没有说清，我更不该把你的付出当作理所当然。尊重应该比关系名称更早出现。", "The relationship is not yet defined, which makes it even more important not to take your effort for granted.");
-  if (relation.type === "spouse" && record.category !== "transfer") return text("家里的开支今天又是你在承担。一起生活不是把一个人的辛苦当成默认，我也应该主动分担。", "You covered another household expense today. Sharing a life should not make one person's effort invisible; I should contribute too.");
-  if (record.category === "gift") return text("很高兴收到这份礼物。这份心意不是理所当然，下次我也想认真为你做点什么。", "I am happy to receive this gift. Your thoughtfulness is not something I should take for granted; I want to return that care.");
-  if (record.category === "transfer") return text("你愿意在我需要的时候转这笔钱，但工作和赚钱都不容易。我应该主动把安排说清楚。", "You transferred this when I needed it, but earning money is never effortless. I should clarify the arrangement.");
-  if (record.category === "dining") return text("今天又是你付钱。工作都不容易，我会好好记得。下次该我来。", "You paid again today. We both work hard, and I will remember that. Next time should be on me.");
-  return text("你的付出不是理所当然。我会认真记住，也会在下一次主动回应。", "Your contribution is not automatic. I would remember it and respond more actively next time.");
+  if (["dating", "matchmaking"].includes(relation.type)) return text("我不会把你的投入当作默认。我会认真看见，也会用行动回应。", "I would not treat your contribution as the default. I would see it and respond through my actions.");
+  if (relation.type === "ambiguous") return text("关系尚未明确，也不妨碍我看见并尊重你的付出。", "The relationship may be undefined, but I can still see and respect what you contributed.");
+  if (relation.type === "spouse" && record.category !== "transfer") return text("这次开支由你承担。我会看见这份辛苦，也愿意共同分担。", "You covered this expense. I would see the effort and share the responsibility.");
+  if (record.category === "gift") return text("谢谢你准备这份礼物。我会认真记得这份心意，也愿意回应。", "Thank you for this gift. I would remember the care behind it and respond.");
+  if (record.category === "transfer") return text("谢谢你愿意承担这笔支出。我会认真看见，也会尊重这份付出。", "Thank you for taking on this payment. I would see and respect what you contributed.");
+  if (record.category === "dining") return text("今天是你付的钱。我会记得这份照顾，也愿意在下一次回应。", "You paid today. I would remember the care and respond next time.");
+  return text("我会认真看见并尊重你的付出，也愿意回应。", "I would see and respect what you contributed, and respond.");
 }
 
 function renderRecordCards(records) {
@@ -565,7 +722,7 @@ function renderRecordCards(records) {
     return `
     <article class="record-card" data-action="record-detail" data-id="${r.id}">
       <div class="record-icon">${categoryIcon(r.category)}</div>
-      <div class="record-main"><b>${escapeHTML(displayRecordTitle(r))}</b><span>${source} · ${formatDate(r.date)} · ${categoryLabel(r.category)}${r.status === "pending" ? text(" · 稍后说清", " · Clarify later") : ""}</span></div>
+      <div class="record-main"><b>${escapeHTML(displayRecordTitle(r))}</b><span>${source} · ${formatDate(r.date)} · ${categoryLabel(r.category)}${reachesSingleReminder(r) ? text(" · 达到单笔提醒线", " · Reached single-payment line") : ""}</span></div>
       <div class="record-amount"><b>−¥${money(r.amount)}</b><span>${text("你的支出", "Your spending")}</span></div>
     </article>
   `; }).join("");
@@ -573,10 +730,10 @@ function renderRecordCards(records) {
 
 function renderRecords() {
   const filters = [
-    ["all", text("全部", "All")], ["pending", text("稍后说清", "Clarify later")], ["gift", text("礼物", "Gifts")], ["transfer", text("转账", "Transfers")], ["image", text("有截图", "With screenshot")]
+    ["all", text("全部", "All")], ["pending", text("达到单笔提醒线", "Reached single-payment line")], ["gift", text("礼物", "Gifts")], ["transfer", text("转账", "Transfers")], ["image", text("有截图", "With screenshot")]
   ];
   let records = [...activeRecords()].sort((a,b) => b.date.localeCompare(a.date));
-  if (state.filter === "pending") records = records.filter(r => r.status === "pending");
+  if (state.filter === "pending") records = records.filter(reachesSingleReminder);
   if (["gift", "transfer"].includes(state.filter)) records = records.filter(r => r.category === state.filter);
   if (state.filter === "image") records = records.filter(r => r.image);
   const scope = scopedRelationship();
@@ -602,13 +759,13 @@ function renderEvidenceOverview(records) {
 }
 
 function renderLegalKnowledge() {
-  return `<div class="section-head law-section-head"><h3>${text("法律小课 · 中国法", "Legal basics · PRC law")}</h3><span>${text("初期静态展示 · 后续可定期更新", "Static for now · Updatable later")}</span></div>
+  return `<div class="section-head law-section-head"><h3>${text("法律小课 · 中国法", "Legal basics · PRC law")}</h3><span>${text("首发内置 · 发布者可审核补充", "Built in · Publisher-extensible")}</span></div>
     <div class="law-feed">${legalKnowledge.map(item => `<button class="law-card" data-action="show-law" data-law-id="${item.id}"><span>${en() ? item.kindEn : item.kindZh}</span><b>${en() ? item.titleEn : item.titleZh}</b><small>${en() ? item.sourceEn : item.sourceZh}</small></button>`).join("")}</div>
     <p class="law-disclaimer">${text("只做普法提示，不根据你的单方记录自动作出法律结论。法条、司法解释和案例更新后，应由律师审核再推送。", "General legal education only. The app does not draw legal conclusions from one person's records. Updates should be lawyer-reviewed before publication.")}</p>`;
 }
 
 function clarifyCandidateRecords() {
-  let records = [...activeRecords()].sort((a, b) => b.date.localeCompare(a.date));
+  let records = [...pendingRecords()].sort((a, b) => b.date.localeCompare(a.date));
   if (state.clarifyMonth !== "all") records = records.filter(record => record.date.startsWith(state.clarifyMonth));
   if (state.clarifyCategory !== "all") records = records.filter(record => record.category === state.clarifyCategory);
   return records;
@@ -616,7 +773,8 @@ function clarifyCandidateRecords() {
 
 function selectedClarifyRecords() {
   const selected = new Set(state.clarifySelected);
-  return state.data.records.filter(record => selected.has(record.id) && record.payer !== "other");
+  const relationshipId = activeRelationship().id;
+  return state.data.records.filter(record => selected.has(record.id) && record.relationshipId === relationshipId && record.payer !== "other" && reachesSingleReminder(record));
 }
 
 function monthHeading(month) {
@@ -661,27 +819,41 @@ function renderClarify() {
   const records = clarifyCandidateRecords();
   const selectedRecords = selectedClarifyRecords();
   const selectedAmount = selectedRecords.reduce((sum, record) => sum + Number(record.amount), 0);
-  const selectedRelationCount = new Set(selectedRecords.map(record => record.relationshipId)).size;
-  const directReady = selectedRecords.length > 0 && selectedRelationCount === 1;
-  const months = [...new Set(activeRecords().map(record => record.date.slice(0, 7)))].sort((a, b) => b.localeCompare(a));
+  const directReady = selectedRecords.length > 0;
+  const months = [...new Set(pendingRecords().map(record => record.date.slice(0, 7)))].sort((a, b) => b.localeCompare(a));
   const categories = [["all", text("全部类目", "All categories")], ["transfer", text("转账", "Transfers")], ["gift", text("礼物", "Gifts")], ["dining", text("餐饮", "Dining")], ["travel", text("出行", "Travel")], ["daily", text("日常", "Everyday")], ["other", text("其他", "Other")]];
   return `
-    <div class="page-intro"><h3>${text("先选范围，再决定怎么说", "Choose the scope, then choose how to speak")}</h3><p>${text("按时间和类目整理自己的付款。可以只选一笔，也可以全选一段时间。", "Organize your payments by time and category. Choose one entry or a whole period.")}</p></div>
+    <div class="page-intro"><h3>${text("先选范围，再决定怎么说", "Choose the scope, then choose how to speak")}</h3><p>${text("这里集中显示当前关系中达到单笔提醒线的支出。可以只选一笔，也可以全选一段时间。", "This shows spending in the current relationship that reached your single-payment reminder line. Choose one entry or a whole period.")}</p></div>
     ${en() ? `<article class="jurisdiction-note"><b>English interface · PRC law first</b><p>This version is intended for cross-border marriages and relationships involving China. Changing the interface language does not change the governing law. Other cross-border rules can be added later after legal review.</p></article>` : ""}
     <div class="clarify-filter-panel">
       <div class="clarify-time-filter"><label>${text("付款时间", "Payment time")}</label><select data-clarify-month><option value="all">${text("全部时间", "All time")}</option>${months.map(month => `<option value="${month}" ${state.clarifyMonth === month ? "selected" : ""}>${monthHeading(month)}</option>`).join("")}</select></div>
       <div class="filter-row compact-filter">${categories.map(([key, label]) => `<button class="filter-chip ${state.clarifyCategory === key ? "active" : ""}" data-action="set-clarify-category" data-category="${key}">${label}</button>`).join("")}</div>
       <div class="selection-toolbar"><span>${text(`当前范围 ${records.length} 笔`, `${records.length} entries in view`)}</span><div><button data-action="select-all-clarify">${text("全选当前范围", "Select all shown")}</button><button data-action="clear-clarify-selection">${text("清空", "Clear")}</button></div></div>
     </div>
-    <div class="clarify-selection-summary"><div><small>${text("已选择", "Selected")}</small><b>${selectedRecords.length} ${text("笔", "entries")} · ${selectedRelationCount} ${text("段关系", "relationships")}</b></div><strong>¥ ${money(selectedAmount)}</strong></div>
+    <div class="clarify-selection-summary"><div><small>${text("当前关系已选择", "Selected for this relationship")}</small><b>${selectedRecords.length} ${text("笔", "entries")}</b></div><strong>¥ ${money(selectedAmount)}</strong></div>
     <div class="clarify-group-list">${renderClarifyGroups(records)}</div>
-    ${renderEvidenceOverview(selectedRecords.length ? selectedRecords : records)}
     <div class="section-head"><h3>${text("你想怎么处理？", "How would you like to proceed?")}</h3></div>
     <div class="clarify-mode-switch"><button class="${state.clarifyMode === "direct" ? "active" : ""}" data-action="set-clarify-mode" data-mode="direct">${text("和对方说清", "Clarify together")}</button><button class="${state.clarifyMode === "consult" ? "active" : ""}" data-action="set-clarify-mode" data-mode="consult">${text("请律师看看", "Ask a lawyer")}</button></div>
-    ${state.clarifyMode === "direct" ? `<article class="clarify-path-card direct"><i>直</i><div><h4>${text("把选中的范围发给对方确认", "Ask the other person to confirm the selected scope")}</h4><p>${text("生成克制的确认页面：先核对付款事实，再询问款项性质、是否返还及期限。正式小程序中由你主动转发给微信联系人。", "Create a neutral confirmation page covering payment facts, purpose, repayment, and timing. In the Mini Program, you would choose whether to share it.")}</p>${selectedRelationCount > 1 ? `<small>${text("一次只能向同一段关系中的对方发起确认，请缩小范围。", "A confirmation can only cover one relationship at a time. Narrow the selection.")}</small>` : ""}<button data-action="prepare-direct" ${directReady ? "" : "disabled"}>${text("生成对方确认内容", "Create confirmation content")}</button></div></article>` : `<article class="clarify-path-card lawyer"><i>询</i><div><h4>${text("整理成一份咨询材料", "Prepare a consultation summary")}</h4><p>${text("把选中的记录、材料完整度和你的说明整理成事实摘要。小程序不绑定任何律所或律师，最后由你主动转发给自己选择的律师。", "Turn the selected entries, evidence status, and your note into a factual summary. The Mini Program is not tied to any lawyer or firm; you choose whom to share it with.")}</p><button data-action="prepare-consultation" ${selectedRecords.length ? "" : "disabled"}>${text("整理咨询材料", "Prepare consultation material")}</button></div></article>`}
+    ${state.clarifyMode === "direct" ? `<article class="clarify-path-card direct"><i>直</i><div><h4>${text("把选中的范围发给对方确认", "Ask the other person to confirm the selected scope")}</h4><p>${text("生成克制的确认页面：先核对付款事实，再询问款项性质、是否返还及期限。正式小程序中由你主动转发给微信联系人。", "Create a neutral confirmation page covering payment facts, purpose, repayment, and timing. In the Mini Program, you would choose whether to share it.")}</p><button data-action="prepare-direct" ${directReady ? "" : "disabled"}>${text("生成对方确认内容", "Create confirmation content")}</button></div></article>` : `<article class="clarify-path-card lawyer"><i>询</i><div><h4>${text("整理成一份咨询材料", "Prepare a consultation summary")}</h4><p>${text("把当前关系中选中的记录、材料完整度和你的说明整理成事实摘要。小程序不绑定任何律所或律师，最后由你主动转发给自己选择的律师。", "Turn the selected entries for this relationship, evidence status, and your note into a factual summary. The Mini Program is not tied to any lawyer or firm; you choose whom to share it with.")}</p><button data-action="prepare-consultation" ${selectedRecords.length ? "" : "disabled"}>${text("整理咨询材料", "Prepare consultation material")}</button></div></article>`}
     <p class="disclaimer">${text("单方记录、对方确认和正式电子签署的效力不同。当前网页原型只做本地预览，不创建真实微信链接，也不向任何律师或机构发送数据。", "A private note, the other person's confirmation, and a formal e-signature have different effects. This web prototype only previews locally: it creates no real WeChat link and sends nothing to any lawyer or organization.")}</p>
+    ${renderEvidenceOverview(selectedRecords.length ? selectedRecords : records)}
     ${renderLegalKnowledge()}
   `;
+}
+
+function renderReminderSettings() {
+  return `<section class="reminder-settings-section" data-reminder-settings>
+    <div class="section-head reminder-settings-head"><h3>${text("你自己设定的提醒线", "Reminder lines you set")}</h3></div>
+    <div class="settings-card">
+      <div class="settings-row" data-setting-row="monthlyLimit"><div><b>${text("月度累计提醒线", "Monthly total line")}</b><span>${text("本月累计达到后提醒你回看", "Review when the monthly total reaches it")}</span></div><input type="number" min="0" data-setting="monthlyLimit" value="${state.data.settings.monthlyLimit}"></div>
+      <div class="settings-row" data-setting-row="yearlyLimit"><div><b>${text("年度累计提醒线", "Yearly total line")}</b><span>${text("本年累计达到后提醒你回看", "Review when the yearly total reaches it")}</span></div><input type="number" min="0" data-setting="yearlyLimit" value="${state.data.settings.yearlyLimit}"></div>
+      <div class="settings-row" data-setting-row="singleLimit"><div><b>${text("单笔大额提醒线", "Single large-payment line")}</b><span>${text("达到后出现说清提示", "Show a clarification reminder when reached")}</span></div><input type="number" min="0" data-setting="singleLimit" value="${state.data.settings.singleLimit}"></div>
+      <div class="settings-row" data-setting-row="oneSidedCountLimit"><div><b>${text("单方面付款次数提醒线", "One-sided payment count line")}</b><span>${text("同一段关系最近30天达到后提醒", "Applied per relationship over the last 30 days")}</span></div><div class="number-suffix"><input type="number" min="0" step="1" data-setting="oneSidedCountLimit" value="${state.data.settings.oneSidedCountLimit}"><em>${text("次", "times")}</em></div></div>
+      <div class="settings-row" data-setting-row="oneSidedMonthLimit"><div><b>${text("单方面付款月份提醒线", "One-sided payment month line")}</b><span>${text("同一段关系连续有付款记录时提醒", "Applied to consecutive months per relationship")}</span></div><div class="number-suffix"><input type="number" min="0" step="1" data-setting="oneSidedMonthLimit" value="${state.data.settings.oneSidedMonthLimit}"><em>${text("月", "months")}</em></div></div>
+      <div class="settings-row" data-setting-row="lawyerLine"><div><b>${text("材料整理提醒线", "Record-review line")}</b><span>${text("累计达到后，提醒你检查截图、附言和上下文", "Remind you to check screenshots, memos, and context")}</span></div><input type="number" min="0" data-setting="lawyerLine" value="${state.data.settings.lawyerLine}"></div>
+    </div>
+    <p class="local-reminder-note">${text("这些提醒线全部由你自行设置，不代表法律标准；次数和月份只按你的付款记录计算，不判断对方现实中是否另有付出。某项填写 0，表示关闭该项提醒。", "You set every reminder line yourself. Counts and months use only your payment records and do not determine whether the other person contributed in reality. Enter 0 to turn off a reminder.")}</p>
+  </section>`;
 }
 
 function renderMe() {
@@ -690,24 +862,20 @@ function renderMe() {
   const scope = scopedRelationship();
   const singleLimit = Number(state.data.settings.singleLimit || 0);
   const yearlyLargeCount = singleLimit > 0 ? yearRecords().filter(record => Number(record.amount) >= singleLimit).length : 0;
+  const relations = state.data.relationships.filter(relation => relation.id !== "empty-relation");
+  const relationshipStats = relations.length ? renderMeRelationshipStats(relations) : renderRelationshipStrip();
   return `
-    <div class="page-intro"><h3>${text("看看最近的自己", "Look at your recent pattern")}</h3><p>${text("数字只是镜子。它帮助你觉察模式，不替你决定应该爱谁、应该花多少。", "Numbers are a mirror. They can reveal a pattern, but they do not decide whom to love or how much to spend.")}</p></div>
+    ${renderReminderSettings()}
+    ${relationshipStats}
+    <div class="page-intro"><h3>${text("看看最近的自己", "Look at your recent pattern")}</h3><p>${text("数字只呈现记录中的事实和模式，不评价关系，也不替你决定。", "Numbers present only the facts and patterns in your records. They do not judge the relationship or decide for you.")}</p></div>
     <div class="metric-grid">
       <div class="metric-card"><span>${text(scope ? "这段关系本月支出" : "全部关系本月支出", scope ? "This relationship this month" : "All relationships this month")}</span><strong>¥${money(monthSpend)}</strong></div>
       <div class="metric-card"><span>${text(scope ? "这段关系本年支出" : "全部关系本年支出", scope ? "This relationship this year" : "All relationships this year")}</span><strong>¥${money(yearlySpend)}</strong></div>
       <div class="metric-card"><span>${text("本月留下记录", "Records this month")}</span><strong>${monthRecords().length}</strong><small>${text("笔", "")}</small></div>
       <div class="metric-card"><span>${text("本年留下记录", "Records this year")}</span><strong>${yearRecords().length}</strong><small>${text("笔", "")}</small></div>
       <div class="metric-card"><span>${text("本年大额支出", "Large payments this year")}</span><strong>${yearlyLargeCount}</strong><small>${text("笔", "")}</small></div>
-      <div class="metric-card"><span>${text("尚未说清", "Not yet clear")}</span><strong>${activeRecords().filter(r => r.status === "pending").length}</strong><small>${text("笔", "")}</small></div>
+      <div class="metric-card"><span>${text("建议说清", "Worth clarifying")}</span><strong>${pendingRecords().length}</strong><small>${text("笔", "")}</small></div>
     </div>
-    <div class="section-head"><h3>${text("你自己设定的提醒线", "Reminder lines you set")}</h3></div>
-    <div class="settings-card">
-      <div class="settings-row"><div><b>${text("月度累计提醒线", "Monthly total line")}</b><span>${text("本月累计达到后提醒你回看", "Review when the monthly total reaches it")}</span></div><input type="number" min="0" data-setting="monthlyLimit" value="${state.data.settings.monthlyLimit}"></div>
-      <div class="settings-row"><div><b>${text("年度累计提醒线", "Yearly total line")}</b><span>${text("本年累计达到后提醒你回看", "Review when the yearly total reaches it")}</span></div><input type="number" min="0" data-setting="yearlyLimit" value="${state.data.settings.yearlyLimit}"></div>
-      <div class="settings-row"><div><b>${text("单笔大额提醒线", "Single large-payment line")}</b><span>${text("达到后提醒这笔值得留下", "Suggest keeping a record")}</span></div><input type="number" min="0" data-setting="singleLimit" value="${state.data.settings.singleLimit}"></div>
-      <div class="settings-row"><div><b>${text("材料整理提醒线", "Record-review line")}</b><span>${text("累计达到后，提醒你检查截图、附言和上下文", "Remind you to check screenshots, memos, and context")}</span></div><input type="number" min="0" data-setting="lawyerLine" value="${state.data.settings.lawyerLine}"></div>
-    </div>
-    <p class="local-reminder-note">${text("这些金额全部由你自行设置，不代表法律标准；某项填写 0，表示关闭该类金额提醒。", "You set every amount yourself. They are not legal standards; enter 0 to turn off that reminder.")}</p>
     <div class="section-head"><h3>${text("关系状态提醒", "Relationship status reminder")}</h3><button data-action="preview-inactivity">${text("预览提醒", "Preview")}</button></div>
     <div class="settings-card">
       <div class="settings-row"><div><b>${text("开启通知", "Enable notifications")}</b><span>${text("长期没有记录时，提醒你确认关系状态", "Check in after a long gap")}</span></div><button class="toggle-control ${state.data.settings.notificationsEnabled ? "on" : ""}" role="switch" aria-checked="${state.data.settings.notificationsEnabled}" data-action="toggle-notifications"><i></i></button></div>
@@ -729,7 +897,7 @@ function renderMe() {
 
 function newDraft() {
   const relation = activeRelationship();
-  return { id: uid(), relationshipId: relation.id, date: new Date().toISOString().slice(0,10), title: "", category: "dining", transferMemo: "", counterparty: relation.name, amount: "", payer: "me", nature: "支出记录", note: "", dueDate: "", status: "recorded", image: "", source: "text" };
+  return { id: uid(), relationshipId: relation.id, date: localDateString(), title: "", category: "dining", transferMemo: "", counterparty: relation.name, amount: "", payer: "me", nature: "支出记录", note: "", dueDate: "", status: "recorded", image: "", source: "text" };
 }
 
 function relationshipLegalHint(type) {
@@ -790,16 +958,16 @@ function renderAddModal() {
       <div class="record-relation-picker"><label>${text("这笔支出属于哪段关系？", "Which relationship does this spending belong to?")}</label><div>${relationshipChoices}</div></div>
       <div class="form-grid" style="margin-top:14px">
         <div class="form-field"><label>${text("金额", "Amount")}</label><input data-draft="amount" type="number" min="0" step="0.01" value="${escapeHTML(d.amount)}" placeholder="0.00"></div>
-        <div class="form-field"><label>${text("日期", "Date")}</label><input data-draft="date" type="date" value="${d.date}"></div>
+        <div class="form-field"><label>${text("日期", "Date")}</label><input data-draft="date" type="date" max="${localDateString()}" value="${d.date}"></div>
       </div>
       <div class="form-field"><label>${titleLabel}</label><input data-draft="title" value="${escapeHTML(d.title)}" placeholder="${titlePlaceholder}"></div>
       <div class="own-spending-label"><i>我</i><span><b>${text("这是一笔我的支出", "This is my spending")}</b><small>${text("不记录对方流水；是否得到回应，留给后续提醒", "The other person's transactions are not recorded; reciprocity is handled through reflection prompts")}</small></span></div>
-      ${state.entryMode === "gift" ? "" : `<div class="choice-question compact-question"><label>${text("选个类目就行", "Choose a category")}</label><div class="category-grid">${categories.map(([value,label]) => `<button class="category-button ${d.category === value ? "active" : ""}" data-action="set-choice" data-field="category" data-value="${value}"><i>${categoryIcon(value)}</i>${label}</button>`).join("")}</div></div>`}
+      ${state.entryMode === "gift" ? "" : `<div class="choice-question compact-question"><label>${text("选个类目就行", "Choose a category")}</label><div class="category-grid">${categories.map(([value,label]) => `<button class="category-button ${d.category === value ? "active" : ""}" data-action="set-choice" data-field="category" data-value="${value}" aria-pressed="${d.category === value}"><i>${categoryIcon(value)}</i>${label}</button>`).join("")}</div></div>`}
       ${needsImage ? `<label class="upload-zone compact-upload" for="receiptFile">
         ${d.image ? `<img src="${d.image}" alt="${text("图片预览", "Image preview")}">` : `<div><b>${state.entryMode === "receipt" ? text("拍摄或选择一张小票", "Take or choose a receipt") : text("选择付款或聊天截图", "Choose a payment or chat screenshot")}</b><span>${text("只处理你主动选择的图片，不读取整个相册", "Only the image you select is processed; the whole album is never read")}<br>${text("原型压缩后仅存于当前浏览器", "The compressed image stays in this browser")}</span></div>`}
       </label>
       <input id="receiptFile" type="file" accept="image/*" ${state.entryMode === "receipt" ? 'capture="environment"' : ""} hidden>` : ""}
-      ${d.category === "transfer" ? `<div class="form-field"><label>${text("转账附言（可不填）", "Transfer memo (optional)")}</label><input data-draft="transferMemo" value="${escapeHTML(d.transferMemo)}" placeholder="${text("例如：临时周转、房租、生日礼物", "e.g. short-term help, rent, birthday gift")}"></div>` : ""}
+      <div class="form-field" data-transfer-memo-field ${d.category === "transfer" ? "" : "hidden"}><label>${text("转账附言（可不填）", "Transfer memo (optional)")}</label><input data-draft="transferMemo" value="${escapeHTML(d.transferMemo)}" placeholder="${text("例如：临时周转、房租、生日礼物", "e.g. short-term help, rent, birthday gift")}"></div>
       <div class="form-field"><label>${text("给自己留一句话（可不填）", "One sentence for yourself (optional)")}</label><textarea rows="3" data-draft="note" placeholder="${text("发生了什么，按你自己的话记下来就好", "What happened, in your own words")}">${escapeHTML(d.note)}</textarea></div>
       <p class="recording-nudge">${text("不必现在给这笔钱下结论。先把真实发生的事留下来。", "You do not need to decide what this money means now. Save what happened first.")}</p>
     `;
@@ -870,23 +1038,22 @@ function saveDraft() {
   state.draft.title = state.draft.title || (noteTitle ? noteTitle.trim().slice(0, 36) : text(`${categoryLabel(state.draft.category)}记录`, `${categoryLabel(state.draft.category)} record`));
   const singleLimit = Number(state.data.settings.singleLimit || 0);
   const isLarge = singleLimit > 0 && state.draft.amount >= singleLimit;
-  const needsReview = state.draft.category === "transfer";
-  state.draft.attention = isLarge || needsReview;
-  state.draft.status = needsReview ? "pending" : "recorded";
-  state.draft.nature = needsReview ? "待确认" : "支出记录";
+  state.draft.attention = isLarge;
+  state.draft.status = "recorded";
+  state.draft.nature = "支出记录";
   state.data.records.push({ ...state.draft });
   state.data.activeRelationshipId = relation.id;
   saveData();
   closeModal();
   state.page = "home";
   render();
-  toast(needsReview ? text("已记下；以后需要时再说清", "Saved. Clarify it later if needed") : isLarge ? text("已记下；这笔值得认真留着", "Saved. This one is worth keeping") : text("已经替你记下来了", "Record saved"));
+  toast(isLarge ? text("已记下；这笔达到你的单笔提醒线，可以稍后说清", "Saved. This reached your single-payment line and can be clarified later") : text("已经替你记下来了", "Record saved"));
 }
 
 function showRecord(id) {
   const r = state.data.records.find(item => item.id === id);
   if (!r) return;
-  const canClarify = r.status === "pending" || r.nature === "借款";
+  const canClarify = reachesSingleReminder(r);
   document.getElementById("modalRoot").innerHTML = `
     <div class="modal-backdrop"><div class="modal-card">
       <div class="modal-head"><h3>${escapeHTML(displayRecordTitle(r))}</h3><button class="close-button" data-action="close-modal">×</button></div>
@@ -896,7 +1063,7 @@ function showRecord(id) {
         <div class="detail-line"><span>${text("日期", "Date")}</span><b>${formatDate(r.date)}</b></div>
         <div class="detail-line"><span>${text("记录视角", "Record perspective")}</span><b>${text("我的支出", "My spending")}</b></div>
         <div class="detail-line"><span>${text("类目", "Category")}</span><b>${categoryLabel(r.category)}</b></div>
-        <div class="detail-line"><span>${text("记录状态", "Status")}</span><b>${r.status === "pending" ? text("以后可说清", "Clarify later") : text("已记录", "Recorded")}</b></div>
+        <div class="detail-line"><span>${text("记录状态", "Status")}</span><b>${canClarify ? text("达到单笔提醒线", "Reached single-payment line") : text("已记录", "Recorded")}</b></div>
         ${r.transferMemo ? `<div class="detail-line"><span>${text("转账附言", "Transfer memo")}</span><b>${escapeHTML(r.transferMemo)}</b></div>` : ""}
         ${r.dueDate ? `<div class="detail-line"><span>${text("期望还款日", "Expected repayment date")}</span><b>${formatDate(r.dueDate)}</b></div>` : ""}
       </div>
@@ -954,47 +1121,92 @@ function prepareDirect() {
   document.getElementById("modalRoot").innerHTML = `<div class="modal-backdrop"><div class="modal-card">
     <div class="modal-head"><div><small class="modal-kicker">${text("直面模式 · 对方确认页预览", "Direct mode · Confirmation preview")}</small><h3>${escapeHTML(displayRelationName(relation))} · ${records.length} ${text("笔款项", "payments")}</h3></div><button class="close-button" data-action="close-modal">×</button></div>
     <div class="document-preview" id="documentText">${escapeHTML(body)}</div>
-    <p class="disclaimer">${text("正式小程序中，可把这一确认页作为小程序卡片由你主动转发给微信联系人。当前网页原型不会生成真实链接，也不会联系对方。", "In the Mini Program, you could choose to share this confirmation page as a card. This web prototype creates no real link and contacts nobody.")}</p>
-    <div class="modal-actions"><button class="secondary-button" data-action="copy-doc">${text("复制沟通文字", "Copy message")}</button><button class="primary-button" data-action="prototype-wechat-share">${text("预览微信转发", "Preview WeChat share")}</button></div>
+    <article class="direct-share-boundary"><b>${text("给对方看的内容到这里为止", "This is all the other person will see")}</b><p>${text("只展示你选中的记录和上面的文字，不包含截图、照片、给自己的备注或咨询材料。", "Only the selected entries and the wording above are shown. Screenshots, photos, private notes, and consultation materials are not included.")}</p></article>
+    <p class="disclaimer">${text("正式小程序中，可把这一文字确认页作为小程序卡片由你主动转发。当前网页原型不会生成真实链接，也不会联系对方。", "In the Mini Program, you could choose to share this text-only confirmation page as a card. This web prototype creates no real link and contacts nobody.")}</p>
+    <div class="modal-actions"><button class="secondary-button" data-action="copy-doc">${text("复制沟通文字", "Copy message")}</button><button class="primary-button" data-action="prototype-wechat-share">${text("预览文字转发", "Preview text share")}</button></div>
   </div></div>`;
 }
 
+function recordMaterialImages(record) {
+  const saved = Array.isArray(record.materials) ? record.materials.filter(Boolean) : [];
+  return [...new Set([record.image, ...saved].filter(Boolean))];
+}
+
+function renderConsultationMaterialCards(records, { preview = false } = {}) {
+  return records.map((record, index) => {
+    const materials = recordMaterialImages(record);
+    const materialGrid = materials.length
+      ? `<div class="consultation-image-grid">${materials.map((image, materialIndex) => `<figure class="consultation-image"><img src="${image}" alt="${text(`第 ${index + 1} 笔记录的材料 ${materialIndex + 1}`, `Material ${materialIndex + 1} for entry ${index + 1}`)}"><figcaption>${text(`截图／照片 ${materialIndex + 1}`, `Screenshot / photo ${materialIndex + 1}`)}</figcaption></figure>`).join("")}</div>`
+      : `<div class="consultation-image-empty compact">${text("这笔记录还没有对应的截图或照片", "No screenshot or photo is attached to this entry yet")}</div>`;
+    const addMaterial = preview ? "" : `<label class="consultation-add-images" for="consultation-image-${record.id}">＋ ${materials.length ? text("继续添加截图或照片", "Add more screenshots or photos") : text("添加对应截图或照片", "Add screenshots or photos")}</label><input id="consultation-image-${record.id}" type="file" accept="image/*" data-consultation-image="${record.id}" multiple hidden>`;
+    return `<article class="consultation-material-card ${preview ? "pdf-entry-page" : ""}">
+      ${preview ? `<div class="pdf-page-number">${text(`第 ${index + 2} 页 · 第 ${index + 1} 笔`, `Page ${index + 2} · Entry ${index + 1}`)}</div>` : ""}
+      <div class="consultation-material-head"><span>${text(`第 ${index + 1} 笔`, `Entry ${index + 1}`)}</span><strong>¥${money(record.amount)}</strong></div>
+      <h4>${escapeHTML(displayRecordTitle(record))}</h4>
+      <div class="consultation-fact-line"><span>${formatDate(record.date)}</span><span>${categoryLabel(record.category)}</span></div>
+      <div class="consultation-copy-lines">
+        <p><b>${text("转账附言", "Transfer memo")}</b>${escapeHTML(record.transferMemo || text("未记录", "Not recorded"))}</p>
+        <p><b>${text("记录说明", "Record note")}</b>${escapeHTML(record.note || text("未记录", "Not recorded"))}</p>
+      </div>
+      <div class="consultation-material-label"><b>${text(`对应材料 · ${materials.length} 张`, `Supporting material · ${materials.length}`)}</b><span>${text("截图和照片与这一笔分开归组", "Screenshots and photos are grouped with this entry")}</span></div>
+      ${materialGrid}
+      ${addMaterial}
+    </article>`;
+  }).join("");
+}
+
 function prepareConsultation() {
-  const records = selectedClarifyRecords();
+  const records = selectedClarifyRecords().sort((a, b) => a.date.localeCompare(b.date));
   if (!records.length) return toast(text("请先选择至少一笔记录", "Select at least one entry"));
+  const contextKey = records.map(record => record.id).join("|");
+  if (state.consultationContextKey !== contextKey) {
+    state.consultationContextKey = contextKey;
+    state.consultationMessage = "";
+  }
   const amount = records.reduce((sum, record) => sum + Number(record.amount), 0);
-  const screenshots = records.filter(record => record.image).length;
+  const materialCount = records.reduce((sum, record) => sum + recordMaterialImages(record).length, 0);
   const memos = records.filter(record => record.transferMemo).length;
-  document.getElementById("modalRoot").innerHTML = `<div class="modal-backdrop"><div class="modal-card">
-    <div class="modal-head"><div><small class="modal-kicker">${text("咨询材料 · 本地整理", "Consultation material · Local preparation")}</small><h3>${text("先把需要咨询的事实整理好", "Organize the facts you want advice on")}</h3></div><button class="close-button" data-action="close-modal">×</button></div>
-    <div class="lawyer-package-summary"><div><span>${text("选中记录", "Selected")}</span><b>${records.length} ${text("笔", "entries")}</b></div><div><span>${text("合计金额", "Total")}</span><b>¥${money(amount)}</b></div><div><span>${text("已有图片", "Images")}</span><b>${screenshots}/${records.length}</b></div><div><span>${text("已有附言", "Memos")}</span><b>${memos}/${records.length}</b></div></div>
-    <div class="form-field"><label>${text("给咨询律师的说明（可不填）", "A note for the lawyer you choose (optional)")}</label><textarea id="consultationMessage" rows="5" placeholder="${text("例如：这些钱我一直没好意思问，现在想知道该先怎么整理和沟通。", "For example: I have not known how to raise this and want advice on organizing the facts first.")}"></textarea></div>
-    <article class="privacy-status"><span>私</span><div><b>${text("此刻仍只在你的设备上", "Still on your device")}</b><p>${text("下一步只是完整预览。小程序不会预设或推荐接收律师；正式转发时，由你自己选择微信联系人。", "The next step is only a full preview. The app does not preselect or recommend a lawyer; you choose the WeChat contact when sharing.")}</p></div></article>
-    <div class="modal-actions"><button class="secondary-button" data-action="close-modal">${text("暂不处理", "Not now")}</button><button class="primary-button" data-action="preview-consultation-package">${text("查看完整预览", "Review full material")}</button></div>
+  const relation = relationshipById(records[0].relationshipId);
+  document.getElementById("modalRoot").innerHTML = `<div class="modal-backdrop"><div class="modal-card consultation-builder">
+    <div class="modal-head"><div><small class="modal-kicker">${text("给律师 · 合并 PDF", "For a lawyer · Combined PDF")}</small><h3>${text("把每一笔和对应材料放在一起", "Keep each entry with its supporting material")}</h3></div><button class="close-button" data-action="close-modal">×</button></div>
+    <div class="pdf-plan-strip"><span><i>1</i>${text("选择记录", "Select entries")}</span><span class="active"><i>2</i>${text("对应材料", "Match materials")}</span><span><i>3</i>${text("合并 PDF", "Combine PDF")}</span></div>
+    <div class="lawyer-package-summary"><div><span>${text("选中记录", "Selected")}</span><b>${records.length} ${text("笔", "entries")}</b></div><div><span>${text("合计金额", "Total")}</span><b>¥${money(amount)}</b></div><div><span>${text("截图／照片", "Images")}</span><b>${materialCount} ${text("张", "files")}</b></div><div><span>${text("已有附言", "Memos")}</span><b>${memos}/${records.length}</b></div></div>
+    <section class="consultation-copy-panel">
+      <div class="consultation-section-title"><div><small>${text("整理后的文案", "Prepared wording")}</small><h4>${text("先把事实范围说清楚", "State the factual scope first")}</h4></div><span>${text("可以补充，不要求下结论", "Add context without reaching a conclusion")}</span></div>
+      <p>${text(`本次整理“${displayRelationName(relation)}”这段关系中选中的 ${records.length} 笔支出，合计人民币 ${money(amount)} 元。PDF 首页呈现这段说明，后面每一笔单独区分，并紧跟对应的截图和照片。`, `This material covers ${records.length} selected entries in this relationship, totaling ¥${money(amount)}. The PDF begins with this note, then separates each entry and its related screenshots and photos.`)}</p>
+      <div class="form-field consultation-message-field"><label>${text("给咨询律师的补充说明（可不填）", "Optional note for the lawyer you choose")}</label><textarea id="consultationMessage" rows="4" placeholder="${text("例如：我想先了解应该怎样保存材料、核对事实和沟通。", "For example: I would like guidance on preserving materials, checking the facts, and communicating.")}">${escapeHTML(state.consultationMessage)}</textarea></div>
+    </section>
+    <div class="consultation-section-title material-list-title"><div><small>${text("PDF 逐笔内容", "PDF entries")}</small><h4>${text("一笔记录对应一组截图和照片", "One entry, one group of screenshots and photos")}</h4></div><span>${text("不会把不同款项的材料混在一起", "Materials from different entries stay separate")}</span></div>
+    <div class="consultation-material-list">${renderConsultationMaterialCards(records)}</div>
+    <article class="privacy-status"><span>私</span><div><b>${text("这里只生成一个合并 PDF", "Only one combined PDF is created")}</b><p>${text("律师收到的是 PDF 查看或下载链接，不会进入你的其他记录，也不会收到给对方的文字确认页。", "The lawyer receives only a PDF view or download link, with no access to your other records or the text-only page for the other person.")}</p></div></article>
+    <div class="modal-actions"><button class="secondary-button" data-action="close-modal">${text("暂不处理", "Not now")}</button><button class="primary-button" data-action="preview-consultation-package">${text("生成合并 PDF 预览", "Preview combined PDF")}</button></div>
   </div></div>`;
 }
 
 function previewConsultationPackage() {
   const records = selectedClarifyRecords().sort((a, b) => a.date.localeCompare(b.date));
-  const message = document.getElementById("consultationMessage")?.value.trim() || text("未填写", "Not provided");
-  const relationGroups = new Map();
-  records.forEach(record => {
-    if (!relationGroups.has(record.relationshipId)) relationGroups.set(record.relationshipId, []);
-    relationGroups.get(record.relationshipId).push(record);
-  });
-  const groups = [...relationGroups.entries()].map(([relationId, items]) => {
-    const relation = relationshipById(relationId);
-    return `${displayRelationName(relation)} · ${relationshipTypeLabel(relation.type)}\n${items.map((record, index) => `  ${index + 1}. ${record.date}｜${displayRecordTitle(record)}｜${categoryLabel(record.category)}｜¥${money(record.amount)}｜${record.image ? text("有图片", "image saved") : text("无图片", "no image")}｜${record.transferMemo || text("无附言", "no memo")}`).join("\n")}`;
-  }).join("\n\n");
+  state.consultationMessage = document.getElementById("consultationMessage")?.value || state.consultationMessage;
+  const message = state.consultationMessage.trim() || text("未填写补充说明", "No additional note provided");
+  const relation = relationshipById(records[0].relationshipId);
   const total = records.reduce((sum, record) => sum + Number(record.amount), 0);
-  const body = en()
-    ? `Legal Consultation Fact Summary (Sharing Preview)\n\nYour note:\n${message}\n\nSelected scope: ${records.length} entries, total ¥${money(total)}\n\n${groups}\n\nEvidence to check: surrounding chats, call recordings, texts, email, IOUs, and later repayments.\n\nThis package contains one person's records only. It is not a legal conclusion and should be reviewed with the lawyer you choose.`
-    : `法律咨询事实材料（转发预览）\n\n一、我的说明\n${message}\n\n二、选中范围\n共 ${records.length} 笔，合计人民币 ${money(total)} 元\n\n${groups}\n\n三、建议进一步核对\n前后聊天、通话录音、短信、邮件、借条及后续还款记录。\n\n本材料仅整理用户单方记录，不构成法律结论；款项性质和处理路径仍需你自行选择的律师结合完整材料判断。`;
-  document.getElementById("modalRoot").innerHTML = `<div class="modal-backdrop"><div class="modal-card">
-    <div class="modal-head"><div><small class="modal-kicker">${text("转发前的最后一步", "Final step before sharing")}</small><h3>${text("你准备转发这些材料", "Material you are preparing to share")}</h3></div><button class="close-button" data-action="close-modal">×</button></div>
-    <div class="document-preview" id="documentText">${escapeHTML(body)}</div>
-    <p class="disclaimer">${text("当前网页原型没有临时分享服务器。点击“预览微信转发”不会上传或发送数据；正式版只有在你确认后，才会为所选副本生成可撤销、会过期的分享链接。", "This web prototype has no temporary sharing service. Previewing WeChat sharing uploads and sends nothing. A production version would create a revocable, expiring link for the selected copy only after your confirmation.")}</p>
-    <div class="modal-actions"><button class="secondary-button" data-action="download-consultation-package">${text("下载自己留存", "Download a copy")}</button><button class="primary-button" data-action="prototype-wechat-share">${text("预览微信转发", "Preview WeChat share")}</button></div>
+  const materialCount = records.reduce((sum, record) => sum + recordMaterialImages(record).length, 0);
+  const fileName = text("律师咨询材料-合并版.pdf", "legal-consultation-material-combined.pdf");
+  document.getElementById("modalRoot").innerHTML = `<div class="modal-backdrop"><div class="modal-card consultation-builder consultation-final-preview">
+    <div class="modal-head"><div><small class="modal-kicker">${text("合并 PDF · 转发预览", "Combined PDF · Sharing preview")}</small><h3>${escapeHTML(fileName)}</h3></div><button class="close-button" data-action="close-modal">×</button></div>
+    <div class="pdf-viewer-shell">
+      <div class="pdf-viewer-toolbar"><b>PDF</b><span>${text(`${records.length + 1} 页 · ${materialCount} 张截图／照片`, `${records.length + 1} pages · ${materialCount} images`)}</span></div>
+      <article class="pdf-cover-page">
+        <small>${text("律师咨询事实材料", "Legal consultation fact material")}</small>
+        <h3>${text("关系支出记录与对应材料", "Relationship payment records and supporting material")}</h3>
+        <div><p><b>${text("关系范围", "Relationship")}</b>${escapeHTML(displayRelationName(relation))} · ${relationshipTypeLabel(relation.type)}</p><p><b>${text("选中记录", "Selected entries")}</b>${records.length} ${text("笔", "entries")}</p><p><b>${text("合计金额", "Total")}</b>¥${money(total)}</p></div>
+        <section><b>${text("我的补充说明", "My additional note")}</b><p>${escapeHTML(message)}</p></section>
+        <footer>${text("本 PDF 只整理用户选择的记录与材料，不自动判断款项性质或形成法律结论。", "This PDF organizes only the entries and materials selected by the user. It does not determine the legal nature of any payment.")}</footer>
+      </article>
+      <div class="consultation-material-list preview-list">${renderConsultationMaterialCards(records, { preview: true })}</div>
+    </div>
+    <article class="pdf-link-card"><i>PDF</i><div><b>${escapeHTML(fileName)}</b><span>${text("一个链接 · 可在线查看或下载", "One link · View online or download")}</span></div><button data-action="prototype-pdf-view">${text("查看", "View")}</button><button data-action="prototype-pdf-download">${text("下载", "Download")}</button></article>
+    <p class="disclaimer">${text("当前是呈现逻辑原型，尚未生成真实 PDF 或外部链接。正式版会在你确认后生成有期限、可撤销的 PDF 链接，再由你主动转发给律师。", "This is a presentation prototype and does not yet create a real PDF or external link. The production version would create an expiring, revocable PDF link only after your confirmation.")}</p>
+    <div class="modal-actions"><button class="secondary-button" data-action="prepare-consultation">${text("返回调整", "Back to edit")}</button><button class="primary-button" data-action="prototype-pdf-share">${text("转发 PDF 链接", "Share PDF link")}</button></div>
   </div></div>`;
 }
 
@@ -1031,13 +1243,13 @@ function privacyStats() {
 
 function exportLocalData() {
   const payload = {
-    app: "有来有往 / Give & Take",
+    app: "来而有往 / Give & Take",
     version: 1,
     exportedAt: new Date().toISOString(),
     notice: text("这是用户主动导出的本地备份，可能包含关系称呼、金额、备注和截图。请自行安全保管。", "This user-initiated local backup may contain relationship names, amounts, notes, and screenshots. Store it securely."),
     data: state.data
   };
-  downloadText(`有来有往-本地备份-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2));
+  downloadText(`来而有往-本地备份-${localDateString()}.json`, JSON.stringify(payload, null, 2));
   toast(text("本地备份已生成，没有上传", "Local backup created; nothing was uploaded"));
 }
 
@@ -1085,6 +1297,31 @@ async function compressImage(file) {
   toast(state.entryMode === "receipt" ? text("小票已加入，请核对金额和类目", "Receipt added. Check the amount and category") : text("截图已加入，请核对金额和类目", "Screenshot added. Check the amount and category"));
 }
 
+async function attachConsultationImages(files, recordId) {
+  const selectedFiles = [...(files || [])].filter(file => file.type.startsWith("image/"));
+  if (!selectedFiles.length) return;
+  if (selectedFiles.some(file => file.size > 12 * 1024 * 1024)) return toast(text("单张图片请控制在 12MB 以内", "Keep each image under 12 MB"));
+  const record = state.data.records.find(item => item.id === recordId);
+  if (!record) return;
+  const added = [];
+  for (const file of selectedFiles) {
+    const raw = await fileToDataURL(file);
+    const img = await loadImage(raw);
+    const max = 1200;
+    const ratio = Math.min(1, max / Math.max(img.width, img.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.width * ratio);
+    canvas.height = Math.round(img.height * ratio);
+    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+    added.push(canvas.toDataURL("image/jpeg", .76));
+  }
+  record.materials = [...recordMaterialImages(record), ...added];
+  record.image = record.materials[0] || "";
+  saveData();
+  prepareConsultation();
+  toast(text(`${added.length} 张截图或照片已放到对应记录下`, `${added.length} image${added.length === 1 ? "" : "s"} added to the record`));
+}
+
 function fileToDataURL(file) {
   return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); });
 }
@@ -1105,14 +1342,14 @@ function showInactivityReminder() {
   const relation = activeRelationship();
   const inactivity = inactivityState(relation);
   const timing = inactivity.elapsed === null ? text("这是一条提醒预览。现在还没有足够的记录来计算间隔。", "This is a preview. There are not enough records yet to calculate the gap.") : text(`这是一条提醒预览。距离最近一次记录已经 ${inactivity.elapsed} 天。`, `This is a preview. It has been ${inactivity.elapsed} days since the latest record.`);
-  simpleModal(text("这段关系还在继续吗？", "Is this relationship still active?"), `<article class="insight-card quiet-alert"><h4>${text("走散了，也是看清了", "Growing apart is clarity too")}</h4><p>${timing} ${text("如果关系仍在继续，而你也仍在付出，请不要逃避对自己的审视。记录不是为了计较，而是为了尊重你自己。", "If the relationship continues and you are still giving, do not look away from your own pattern. Recording is not scorekeeping; it is self-respect.")}</p></article><article class="insight-card sage"><h4>${text("你们是平等的主体", "You are equal people")}</h4><p>${text("彼此的时间、劳动和金钱都值得被看见，也应该得到互相尊重。", "Both people's time, work, and money deserve to be seen and respected.")}</p></article>`);
+  simpleModal(text("记录间隔提醒", "Record gap reminder"), `<article class="insight-card quiet-alert"><h4>${text("已经一段时间没有新的记录", "There has been no new record for a while")}</h4><p>${timing} ${text("这只是一条时间间隔提醒，不代表关系状态，也不要求你采取行动。", "This is only a time-gap reminder. It does not define the relationship or require action.")}</p></article><article class="insight-card sage"><h4>${text("你的每一份付出，都值得被尊重", "Every contribution you make deserves respect")}</h4><p>${text("记录帮助你看见自己的付出；如何理解，由你决定。", "A record helps you see what you contributed; its meaning remains yours to decide.")}</p></article>`);
 }
 
 async function toggleNotifications() {
   const settings = state.data.settings;
   if (settings.notificationsEnabled) {
     settings.notificationsEnabled = false;
-    saveData(); render(); toast(text("关系状态提醒已关闭", "Relationship reminders are off"));
+    saveData(); render({ preserveScroll: true }); toast(text("关系状态提醒已关闭", "Relationship reminders are off"));
     return;
   }
   let browserUnavailable = !("Notification" in window);
@@ -1126,7 +1363,7 @@ async function toggleNotifications() {
   }
   if ("Notification" in window && Notification.permission === "denied") browserUnavailable = true;
   settings.notificationsEnabled = true;
-  saveData(); render();
+  saveData(); render({ preserveScroll: true });
   toast(browserUnavailable ? text("已开启应用内提醒；浏览器通知未授权", "In-app reminders are on; browser notifications are unavailable") : text("关系状态提醒已开启", "Relationship reminders are on"));
 }
 
@@ -1139,11 +1376,11 @@ function maybeNotifyInactive() {
   const lastNotice = settings.lastInactivityNotices[relation.id];
   if (lastNotice && daysSince(lastNotice) < 7) return;
   try {
-    new Notification(text("有来有往：这段关系还在继续吗？", "Give & Take: Is this relationship still active?"), {
-      body: text(`你与${relation.name}已经 ${inactivity.elapsed} 天没有留下记录。走散了，也是看清了；如果仍在付出，请认真看见自己。`, `No record with ${displayRelationName(relation)} for ${inactivity.elapsed} days. If you are still giving, take a clear look at your pattern.`)
+    new Notification(text("来而有往：记录间隔提醒", "Give & Take: Record gap reminder"), {
+      body: text(`已经 ${inactivity.elapsed} 天没有留下新的记录。这只是一条时间间隔提醒，是否关注由你决定。`, `There has been no new record for ${inactivity.elapsed} days. This is only a time-gap reminder; whether to act remains your choice.`)
     });
   } catch (_) { return; }
-  settings.lastInactivityNotices[relation.id] = new Date().toISOString().slice(0, 10);
+  settings.lastInactivityNotices[relation.id] = localDateString();
   saveData();
 }
 
@@ -1202,23 +1439,75 @@ function showLaw(id) {
 }
 
 function showRelationships() {
+  const managing = state.page === "me";
+  state.relationshipDialogMode = managing ? "manage" : "switch";
   const activeId = state.data.activeRelationshipId;
+  const selectedId = managing ? state.relationshipScope : activeId;
+  const relationships = state.data.relationships.filter(relation => relation.id !== "empty-relation");
+  const relationshipRows = relationships.map(relation => {
+    const recordCount = state.data.records.filter(record => record.relationshipId === relation.id).length;
+    const details = `${relationshipTypeLabel(relation.type)} · ${text(`${recordCount} 笔记录`, `${recordCount} records`)}`;
+    if (!managing) return `<button class="relationship-item ${relation.id === activeId ? "active" : ""}" data-action="select-relationship" data-id="${relation.id}"><i>${relationshipTypeLabel(relation.type).slice(0,1)}</i><span><b>${escapeHTML(displayRelationName(relation))}</b><span>${details}</span></span><em>${relation.id === activeId ? "✓" : "›"}</em></button>`;
+    return `<div class="relationship-manage-row ${relation.id === selectedId ? "active" : ""}">
+      <button class="relationship-item" data-action="view-relationship-stats" data-id="${relation.id}"><i>${relationshipTypeLabel(relation.type).slice(0,1)}</i><span><b>${escapeHTML(displayRelationName(relation))}</b><span>${details}</span></span><em>›</em></button>
+      <button class="relationship-delete" data-action="confirm-delete-relationship" data-id="${relation.id}">${text("删除", "Delete")}</button>
+    </div>`;
+  }).join("");
   document.getElementById("modalRoot").innerHTML = `<div class="modal-backdrop"><div class="modal-card">
-    <div class="modal-head"><h3>${text("我的关系", "My relationships")}</h3><button class="close-button" data-action="close-modal">×</button></div>
-    <div class="relationship-list">${state.data.relationships.map(relation => `<button class="relationship-item ${relation.id === activeId ? "active" : ""}" data-action="select-relationship" data-id="${relation.id}"><i>${relationshipTypeLabel(relation.type).slice(0,1)}</i><span><b>${escapeHTML(displayRelationName(relation))}</b><span>${relationshipTypeLabel(relation.type)} · ${text(`${state.data.records.filter(r => r.relationshipId === relation.id).length} 笔记录`, `${state.data.records.filter(r => r.relationshipId === relation.id).length} records`)}</span></span><em>${relation.id === activeId ? text("当前", "Current") : text("切换", "Switch")}</em></button>`).join("")}</div>
+    <div class="modal-head"><h3>${managing ? text("管理关系", "Manage relationships") : text("选择当前关系", "Choose current relationship")}</h3><button class="close-button" data-action="close-modal">×</button></div>
+    <div class="relationship-list">${relationshipRows}</div>
     <button class="primary-button" style="width:100%" data-action="open-new-relationship">＋ ${text("新建关系", "New relationship")}</button>
-    <p class="disclaimer">${text("不同关系分别统计。关系类型会调整后续询问和提示，但不会单独决定一笔钱在法律上属于什么。", "Each relationship is tracked separately. Its type can shape later prompts, but never determines the legal nature of a payment on its own.")}</p>
+    <p class="disclaimer">${managing ? text("点击一段关系，会关闭本窗口并在“我的”中展示它的统计，不会改变“今天”正在记录的关系。", "Choose a relationship to show its statistics in Me. This does not change the relationship currently used on Today.") : text("这里只选择“今天”和“记录”正在使用的关系。", "This only chooses the relationship used on Today and Records.")}</p>
   </div></div>`;
+}
+
+function confirmDeleteRelationship(id) {
+  const relation = state.data.relationships.find(item => item.id === id);
+  if (!relation || relation.id === "empty-relation") return;
+  const records = state.data.records.filter(record => record.relationshipId === id);
+  const screenshots = records.filter(record => Boolean(record.image)).length;
+  document.getElementById("modalRoot").innerHTML = `<div class="modal-backdrop"><div class="modal-card relationship-delete-confirm">
+    <div class="modal-head"><div><small class="modal-kicker">${text("删除关系前，再停一下", "Pause before deleting")}</small><h3>${escapeHTML(displayRelationName(relation))}</h3></div><button class="close-button" data-action="close-modal">×</button></div>
+    <div class="delete-reflection-list">
+      <p>${text("你们已经说清了吗？", "Have you talked it through?")}</p>
+      <p>${text("你们处理好了吗？", "Has everything been handled?")}</p>
+      <p>${text("对方有回应了吗？", "Has the other person responded?")}</p>
+    </div>
+    <article class="delete-warning"><b>${text("删除后无法撤销", "This cannot be undone")}</b><p>${text(`这会同时删除这段关系下的 ${records.length} 笔本地记录和 ${screenshots} 张截图。若以后还可能需要核对事实，请先保留或导出备份。`, `This also deletes ${records.length} local records and ${screenshots} screenshots for this relationship. Keep it or export a backup first if you may need the facts later.`)}</p></article>
+    <div class="modal-actions"><button class="secondary-button" data-action="open-relationships">${text("先保留", "Keep for now")}</button><button class="relationship-delete-final" data-action="delete-relationship" data-id="${id}">${text("确认删除", "Delete")}</button></div>
+  </div></div>`;
+}
+
+function deleteRelationship(id) {
+  const relation = state.data.relationships.find(item => item.id === id);
+  if (!relation || relation.id === "empty-relation") return;
+  state.data.relationships = state.data.relationships.filter(item => item.id !== id);
+  state.data.records = state.data.records.filter(record => record.relationshipId !== id);
+  if (state.data.settings.lastInactivityNotices) delete state.data.settings.lastInactivityNotices[id];
+  state.clarifySelected = state.clarifySelected.filter(recordId => state.data.records.some(record => record.id === recordId));
+  if (!state.data.relationships.length) {
+    const empty = emptyData();
+    state.data.relationships = empty.relationships;
+    state.data.activeRelationshipId = empty.activeRelationshipId;
+  } else if (state.data.activeRelationshipId === id) {
+    state.data.activeRelationshipId = state.data.relationships[0].id;
+  }
+  state.relationshipScope = "all";
+  saveData();
+  closeModal();
+  state.page = "me";
+  render();
+  toast(text(`已删除“${displayRelationName(relation)}”及其本地记录`, `Deleted “${displayRelationName(relation)}” and its local records`));
 }
 
 function showNewRelationship() {
   document.getElementById("modalRoot").innerHTML = `<div class="modal-backdrop"><div class="modal-card">
     <div class="modal-head"><h3>${text("新建关系", "New relationship")}</h3><button class="close-button" data-action="close-modal">×</button></div>
-    <div class="form-field"><label>${text("怎么称呼对方？", "What should this person be called?")}</label><input id="relationshipName" placeholder="${text("例如：小周、她、老公", "e.g. Alex, my partner")}"></div>
+    <div class="form-field"><label>${text("怎么称呼对方？", "What should this person be called?")}</label><input id="relationshipName" placeholder="${text("例如：小周", "e.g. Alex")}"></div>
     <div class="form-field"><label>${text("目前是什么关系？", "What is the relationship?")}</label><select id="relationshipType">${["friend","dating","matchmaking","ambiguous","lover","spouse"].map(type => `<option value="${type}" ${type === "lover" ? "selected" : ""}>${relationshipTypeLabel(type)}</option>`).join("")}</select></div>
-    <div class="form-field"><label>${text("关系开始时间（可选）", "Start date (optional)")}</label><input id="relationshipStart" type="date"></div>
+    <div class="form-field"><label>${text("关系开始时间（可选）", "Start date (optional)")}</label><input id="relationshipStart" type="date" max="${localDateString()}"></div>
     <div class="form-field"><label>${text("只给自己看的备注（可选）", "Private note (optional)")}</label><textarea id="relationshipNote" rows="3" placeholder="${text("例如：2026年春天开始交往", "e.g. Started dating in spring 2026")}"></textarea></div>
-    <article class="insight-card sage"><h4>${text("为什么要区分关系？", "Why does relationship type matter?")}</h4><p>${text("同样一笔转账，发生在朋友、相亲、恋爱或婚姻中，需要追问的事实不同。但关系名称只是背景，不是法律答案。", "The same transfer may raise different questions between friends, dates, partners, or spouses. The label is context, not a legal answer.")}</p></article>
+    <article class="insight-card sage"><h4>${text("为什么要区分关系？", "Why does relationship type matter?")}</h4><p>${text("同样一笔支出，发生在不同关系中，理解背景会有所不同。关系名称只帮助整理记录，不替你定义这笔钱。", "The same payment can have different context in different relationships. The label only helps organize records; it does not define the payment for you.")}</p></article>
     <div class="modal-actions"><button class="secondary-button" data-action="open-relationships">${text("返回", "Back")}</button><button class="primary-button" data-action="save-relationship">${text("建立关系", "Create")}</button></div>
   </div></div>`;
 }
@@ -1238,9 +1527,35 @@ function saveRelationship() {
     state.data.relationships = state.data.relationships.filter(item => item.id !== "empty-relation");
   }
   state.data.relationships.push(relation);
-  state.data.activeRelationshipId = relation.id;
   state.perspective = "self";
-  saveData(); closeModal(); state.page = "home"; render(); toast(text(`已建立“${name}”这段关系`, `Relationship “${name}” created`));
+  if (state.relationshipDialogMode === "manage") {
+    state.relationshipScope = relation.id;
+    state.page = "me";
+  } else {
+    state.data.activeRelationshipId = relation.id;
+    state.page = "home";
+  }
+  saveData(); closeModal(); render(); toast(text(`已建立“${name}”这段关系`, `Relationship “${name}” created`));
+}
+
+function scrollToViewElement(element, offset = 12) {
+  const view = document.getElementById("appView");
+  if (!view || !element) return;
+  const top = element.getBoundingClientRect().top - view.getBoundingClientRect().top + view.scrollTop - offset;
+  view.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+}
+
+function focusReminderSetting(settingKey) {
+  const row = document.querySelector(`[data-setting-row="${settingKey}"]`);
+  if (!row) return;
+  row.classList.add("setting-row-focus");
+  scrollToViewElement(row);
+  window.setTimeout(() => row.classList.remove("setting-row-focus"), 1800);
+}
+
+function focusSelectedClarifyRecords() {
+  const firstSelected = document.querySelector(".clarify-record-row.selected");
+  if (firstSelected) scrollToViewElement(firstSelected);
 }
 
 document.addEventListener("click", async event => {
@@ -1256,18 +1571,23 @@ document.addEventListener("click", async event => {
   if (action === "toggle-language") {
     state.language = en() ? "zh" : "en";
     localStorage.setItem(LANGUAGE_KEY, state.language);
-    closeModal(); render({ preserveScroll: state.page === "clarify" });
+    closeModal(); render({ preserveScroll: state.page === "clarify" || state.page === "me" });
   }
   if (action === "open-relationships") showRelationships();
-  if (action === "open-new-relationship") showNewRelationship();
+  if (action === "open-new-relationship") { state.relationshipDialogMode = state.page === "me" ? "manage" : "switch"; showNewRelationship(); }
   if (action === "save-relationship") saveRelationship();
-  if (action === "select-relationship") { state.data.activeRelationshipId = target.dataset.id; state.perspective = "self"; saveData(); closeModal(); state.page = "home"; render(); toast(text("已切换当前关系", "Relationship switched")); }
+  if (action === "select-relationship") { state.data.activeRelationshipId = target.dataset.id; state.perspective = "self"; state.clarifySelected = []; saveData(); closeModal(); render(); toast(text("已选择当前关系", "Current relationship selected")); }
+  if (action === "view-relationship-stats") { state.relationshipScope = target.dataset.id; closeModal(); state.page = "me"; render({ preserveScroll: true }); toast(text("已展示这段关系的统计", "Showing this relationship's statistics")); }
+  if (action === "confirm-delete-relationship") confirmDeleteRelationship(target.dataset.id);
+  if (action === "delete-relationship") deleteRelationship(target.dataset.id);
   if (action === "set-relationship-scope") {
-    if (isRelationshipOverviewPage()) state.relationshipScope = target.dataset.id;
+    const overviewOnly = isRelationshipOverviewPage();
+    if (overviewOnly) state.relationshipScope = target.dataset.id;
     else if (target.dataset.id !== "all") { state.data.activeRelationshipId = target.dataset.id; saveData(); }
+    if (state.page === "me") state.statsRange = "total";
     state.perspective = "self";
-    state.clarifySelected = [];
-    render({ preserveScroll: state.page === "clarify" });
+    if (!overviewOnly) state.clarifySelected = [];
+    render({ preserveScroll: state.page === "clarify" || state.page === "me" });
   }
   if (action === "open-entry-menu") openEntryMenu();
   if (action === "open-add-text") openAdd("text");
@@ -1283,9 +1603,31 @@ document.addEventListener("click", async event => {
   if (action === "close-modal") closeModal();
   if (action === "next-step" && validateDraftStep()) { state.addStep += 1; renderAddModal(); }
   if (action === "prev-step") { syncDraftInputs(); state.addStep -= 1; renderAddModal(); }
-  if (action === "set-choice") { state.draft[target.dataset.field] = target.dataset.value; renderAddModal(); }
+  if (action === "set-choice") {
+    state.draft[target.dataset.field] = target.dataset.value;
+    if (target.dataset.field === "category") {
+      document.querySelectorAll("#modalRoot .category-button").forEach(button => {
+        const active = button.dataset.value === target.dataset.value;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+      const transferMemoField = document.querySelector("#modalRoot [data-transfer-memo-field]");
+      if (transferMemoField) transferMemoField.hidden = target.dataset.value !== "transfer";
+    } else {
+      renderAddModal();
+    }
+  }
   if (action === "save-record") saveDraft();
   if (action === "set-filter") { state.filter = target.dataset.filter; render(); }
+  if (action === "set-stats-range") {
+    const view = document.getElementById("appView");
+    const previousScrollTop = view.scrollTop;
+    state.statsRange = target.dataset.range;
+    const section = document.querySelector("#appView .relationship-overview");
+    const relations = state.data.relationships.filter(relation => relation.id !== "empty-relation");
+    if (section && state.page === "me") section.outerHTML = renderMeRelationshipStats(relations);
+    view.scrollTop = previousScrollTop;
+  }
   if (action === "set-clarify-category") { state.clarifyCategory = target.dataset.category; render({ preserveScroll: true }); }
   if (action === "toggle-clarify-record") {
     state.clarifySelected = state.clarifySelected.includes(target.dataset.id)
@@ -1302,6 +1644,9 @@ document.addEventListener("click", async event => {
   if (action === "prepare-direct") prepareDirect();
   if (action === "prepare-consultation") prepareConsultation();
   if (action === "preview-consultation-package") previewConsultationPackage();
+  if (action === "prototype-pdf-view") toast(text("上方就是律师打开链接后看到的 PDF 预览", "The viewer above shows what the lawyer would see after opening the PDF link"));
+  if (action === "prototype-pdf-download") toast(text("正式版将在这里下载同一个合并 PDF", "The production version will download the same combined PDF here"));
+  if (action === "prototype-pdf-share") toast(text("正式版将由你主动把 PDF 查看／下载链接转发给律师", "In the production version, you choose the lawyer who receives the PDF view/download link"));
   if (action === "prototype-wechat-share") toast(text("正式小程序中将由你主动选择微信联系人；当前没有生成或发送链接", "In the Mini Program you would choose a contact; no link was created or sent here"));
   if (action === "download-consultation-package") {
     const packageText = document.getElementById("documentText")?.innerText || "";
@@ -1319,8 +1664,32 @@ document.addEventListener("click", async event => {
   }
   if (action === "evidence-pack") evidencePack();
   if (action === "go-records") { state.page = "records"; render(); }
-  if (action === "go-clarify") { state.page = "clarify"; render(); }
-  if (action === "go-me") { state.page = "me"; render(); }
+  if (action === "go-clarify") {
+    state.clarifyMonth = "all";
+    state.clarifyCategory = "all";
+    state.clarifySelected = pendingRecords().map(record => record.id);
+    state.page = "clarify";
+    render();
+    requestAnimationFrame(focusSelectedClarifyRecords);
+  }
+  if (action === "go-reminder-setting") {
+    state.relationshipScope = state.data.activeRelationshipId;
+    state.statsRange = "total";
+    state.page = "me";
+    render();
+    requestAnimationFrame(() => focusReminderSetting(target.dataset.settingTarget));
+  }
+  if (action === "go-relationship-records") {
+    state.data.activeRelationshipId = target.dataset.id;
+    state.relationshipScope = target.dataset.id;
+    state.filter = "all";
+    state.perspective = "self";
+    state.page = "records";
+    saveData();
+    render();
+  }
+  if (action === "go-me") { state.relationshipScope = activeRelationship().id; state.statsRange = "total"; state.page = "me"; render(); }
+  if (action === "go-me-relationship") { state.relationshipScope = target.dataset.id; state.statsRange = "total"; state.page = "me"; render(); }
   if (action === "preview-inactivity") showInactivityReminder();
   if (action === "show-evidence-checklist") showEvidenceChecklist();
   if (action === "show-share-boundary") showShareBoundary();
@@ -1329,13 +1698,14 @@ document.addEventListener("click", async event => {
   if (action === "clear-local-data") clearLocalData();
   if (action === "toggle-notifications") await toggleNotifications();
   if (action === "show-reflection") simpleModal("后来不太舒服的支出", `<article class="insight-card peach"><h4>本月合计 ¥${money(regretAmount())}</h4><p>这些记录被你标记为“有点后悔”或“心里没底”。数字并不说明你做错了，只是提醒你看看当时发生了什么。</p></article>${renderRecordCards(monthRecords().filter(r => ["regret","uneasy"].includes(r.feeling)))}`);
-  if (action === "show-principle") simpleModal(text("提醒原则", "Reminder principles"), `<article class="insight-card sage"><h4>${text("尊重你自己", "Respect yourself")}</h4><p>${text("记录下来，就是对你自己付出的尊重。都是你的血汗钱，值得被认真看见。", "Keeping a record respects the work behind what you gave. Your money deserves to be seen clearly.")}</p></article><article class="insight-card peach"><h4>${text("平等，不是计较", "Equality is not scorekeeping")}</h4><p>${text("你们是平等的主体，彼此的劳动、金钱与心意都应该互相尊重。", "Both people are equal. Each person's work, money, and care deserve mutual respect.")}</p></article><article class="insight-card quiet-alert"><h4>${text("只记录真正需要看见的", "Record what truly needs to be seen")}</h4><p>${text("不鼓励逐笔记录小额日常；更值得关注的是大额给付、长期单方面付款，以及需要留存事实的支出。", "Do not log every small daily purchase. Focus on larger payments, long one-sided patterns, and facts that may matter later.")}</p></article>`);
+  if (action === "show-principle") simpleModal(text("提醒原则", "Reminder principles"), `<article class="insight-card sage"><h4>${text("只呈现事实", "Present facts only")}</h4><p>${text("记录金额、时间、次数和持续月份，不替你定义关系或款项。", "Record amounts, dates, counts, and duration without defining the relationship or payment for you.")}</p></article><article class="insight-card peach"><h4>${text("只在越线时提醒", "Remind only when a line is reached")}</h4><p>${text("提醒来自你自己设置的额度、次数和月份边界，不评价你的选择。", "Reminders come from the amount, count, and duration lines you set, without judging your choices.")}</p></article><article class="insight-card quiet-alert"><h4>${text("选择始终属于你", "The choice remains yours")}</h4><p>${text("提醒负责让付出被看见；如何理解、是否说清、是否行动，都由你决定。", "A reminder makes your contribution visible; interpretation, clarification, and action remain your choice.")}</p></article>`);
   if (action === "show-privacy") showPrivacyCenter();
   if (action === "reset-demo") { if (confirm(text("确定恢复初始演示数据吗？你新增的本地记录会被清除。", "Reset the demo? Your local records will be removed."))) { state.data = defaultData(); state.relationshipScope = "all"; state.clarifySelected = []; state.perspective = "self"; saveData(); render(); toast(text("已恢复演示数据", "Demo data reset")); } }
 });
 
-document.addEventListener("change", event => {
+document.addEventListener("change", async event => {
   if (event.target.id === "receiptFile") compressImage(event.target.files[0]);
+  if (event.target.matches("[data-consultation-image]")) await attachConsultationImages(event.target.files, event.target.dataset.consultationImage);
   if (event.target.matches("[data-clarify-month]")) { state.clarifyMonth = event.target.value; render({ preserveScroll: true }); }
   if (event.target.matches("[data-setting]")) {
     state.data.settings[event.target.dataset.setting] = Number(event.target.value || 0);
@@ -1345,6 +1715,7 @@ document.addEventListener("change", event => {
 
 document.addEventListener("input", event => {
   if (state.draft && event.target.matches("[data-draft]")) state.draft[event.target.dataset.draft] = event.target.value;
+  if (event.target.id === "consultationMessage") state.consultationMessage = event.target.value;
 });
 
 document.getElementById("modalRoot").addEventListener("click", event => {
