@@ -1288,12 +1288,17 @@ function saveRelationship() {
 document.addEventListener("click", async event => {
   const target = event.target.closest("[data-action], [data-page]");
   if (!target) return;
-  if (target.dataset.page) { state.page = target.dataset.page; render(); return; }
+  if (target.dataset.page) {
+    if (state.page === target.dataset.page) return;
+    state.page = target.dataset.page;
+    render();
+    return;
+  }
   const action = target.dataset.action;
   if (action === "toggle-language") {
     state.language = en() ? "zh" : "en";
     localStorage.setItem(LANGUAGE_KEY, state.language);
-    closeModal(); render();
+    closeModal(); render({ preserveScroll: state.page === "clarify" });
   }
   if (action === "open-relationships") showRelationships();
   if (action === "open-new-relationship") showNewRelationship();
@@ -1304,7 +1309,7 @@ document.addEventListener("click", async event => {
     else if (target.dataset.id !== "all") { state.data.activeRelationshipId = target.dataset.id; saveData(); }
     state.perspective = "self";
     state.clarifySelected = [];
-    render();
+    render({ preserveScroll: state.page === "clarify" });
   }
   if (action === "open-entry-menu") openEntryMenu();
   if (action === "open-add-text") openAdd("text");
@@ -1323,7 +1328,7 @@ document.addEventListener("click", async event => {
   if (action === "set-choice") { state.draft[target.dataset.field] = target.dataset.value; renderAddModal(); }
   if (action === "save-record") saveDraft();
   if (action === "set-filter") { state.filter = target.dataset.filter; render(); }
-  if (action === "set-clarify-category") { state.clarifyCategory = target.dataset.category; render(); }
+  if (action === "set-clarify-category") { state.clarifyCategory = target.dataset.category; render({ preserveScroll: true }); }
   if (action === "toggle-clarify-record") {
     state.clarifySelected = state.clarifySelected.includes(target.dataset.id)
       ? state.clarifySelected.filter(id => id !== target.dataset.id)
@@ -1335,7 +1340,7 @@ document.addEventListener("click", async event => {
     render({ preserveScroll: true });
   }
   if (action === "clear-clarify-selection") { state.clarifySelected = []; render({ preserveScroll: true }); }
-  if (action === "set-clarify-mode") { state.clarifyMode = target.dataset.mode; render(); }
+  if (action === "set-clarify-mode") { state.clarifyMode = target.dataset.mode; render({ preserveScroll: true }); }
   if (action === "prepare-direct") prepareDirect();
   if (action === "prepare-consultation") prepareConsultation();
   if (action === "preview-consultation-package") previewConsultationPackage();
@@ -1378,7 +1383,7 @@ document.addEventListener("click", async event => {
 
 document.addEventListener("change", event => {
   if (event.target.id === "receiptFile") compressImage(event.target.files[0]);
-  if (event.target.matches("[data-clarify-month]")) { state.clarifyMonth = event.target.value; render(); }
+  if (event.target.matches("[data-clarify-month]")) { state.clarifyMonth = event.target.value; render({ preserveScroll: true }); }
   if (event.target.matches("[data-setting]")) {
     state.data.settings[event.target.dataset.setting] = Number(event.target.value || 0);
     saveData(); render({ preserveScroll: true }); toast(text("设置已保存", "Setting saved"));
