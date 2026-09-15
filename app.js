@@ -637,7 +637,7 @@ function renderEvidenceOverview(records) {
   const withNote = records.filter(record => record.note).length;
   const item = (labelZh, labelEn, value, total) => `<div class="evidence-chip"><i>${value ? "✓" : "○"}</i><span>${text(labelZh, labelEn)}</span><b>${value}/${total}</b></div>`;
   return `<article class="evidence-overview">
-    <div class="evidence-head"><div><small>${text("律师通常先看事实材料", "What a lawyer usually checks first")}</small><h4>${text("不需要再做复杂问卷", "No long questionnaire needed")}</h4></div><button data-action="show-evidence-checklist">${text("材料清单", "Checklist")}</button></div>
+    <div class="evidence-head"><div><small>${text("咨询前先整理事实材料", "Organize the facts before seeking advice")}</small><h4>${text("不需要再做复杂问卷", "No long questionnaire needed")}</h4></div><button data-action="show-evidence-checklist">${text("材料清单", "Checklist")}</button></div>
     <p>${text("先看付款截图、转账附言和前后对话，再提醒你确认是否还有通话录音、短信、邮件或其他原始记录。", "Start with the payment screenshot, transfer memo, and surrounding conversation. Then check for call recordings, texts, email, or other original records.")}</p>
     <div class="evidence-grid">${item("付款截图", "Payment screenshot", withScreenshot, records.length)}${item("转账附言", "Transfer memo", withMemo, records.length)}${item("自己留下的话", "Your note", withNote, records.length)}</div>
   </article>`;
@@ -719,9 +719,9 @@ function renderClarify() {
     <div class="clarify-group-list">${renderClarifyGroups(records)}</div>
     ${renderEvidenceOverview(selectedRecords.length ? selectedRecords : records)}
     <div class="section-head"><h3>${text("你想怎么处理？", "How would you like to proceed?")}</h3></div>
-    <div class="clarify-mode-switch"><button class="${state.clarifyMode === "direct" ? "active" : ""}" data-action="set-clarify-mode" data-mode="direct">${text("直面模式", "Direct mode")}</button><button class="${state.clarifyMode === "lawyer" ? "active" : ""}" data-action="set-clarify-mode" data-mode="lawyer">${text("开不了口模式", "Lawyer-first mode")}</button></div>
-    ${state.clarifyMode === "direct" ? `<article class="clarify-path-card direct"><i>直</i><div><h4>${text("把选中的范围发给对方确认", "Ask the other person to confirm the selected scope")}</h4><p>${text("生成克制的确认页面：先核对付款事实，再询问款项性质、是否返还及期限。正式小程序中由你主动转发给微信联系人。", "Create a neutral confirmation page covering payment facts, purpose, repayment, and timing. In the Mini Program, you would choose whether to share it.")}</p>${selectedRelationCount > 1 ? `<small>${text("直面模式一次只能选择同一段关系，请缩小范围。", "Direct mode can only cover one relationship at a time. Narrow the selection.")}</small>` : ""}<button data-action="prepare-direct" ${directReady ? "" : "disabled"}>${text("生成对方确认内容", "Create confirmation content")}</button></div></article>` : `<article class="clarify-path-card lawyer"><i>律</i><div><h4>${text("先整理好，再给律师留言", "Organize it first, then leave a message for a lawyer")}</h4><p>${text("把选中记录、截图情况和你的留言整理成咨询包。正式版可提交至律所公众号后台，提交前必须再次预览确认。", "Prepare the selected entries, evidence status, and your message for the law firm's official-account inbox. A final preview is required before submission.")}</p><button data-action="prepare-lawyer" ${selectedRecords.length ? "" : "disabled"}>${text("预览律师留言包", "Preview lawyer message package")}</button></div></article>`}
-    <p class="disclaimer">${text("单方记录、对方确认和正式电子签署的效力不同。当前网页原型不会创建真实微信链接，也不会向律所后台发送数据。", "A private note, the other person's confirmation, and a formal e-signature have different effects. This web prototype creates no real WeChat link and sends nothing to a law firm.")}</p>
+    <div class="clarify-mode-switch"><button class="${state.clarifyMode === "direct" ? "active" : ""}" data-action="set-clarify-mode" data-mode="direct">${text("和对方说清", "Clarify together")}</button><button class="${state.clarifyMode === "consult" ? "active" : ""}" data-action="set-clarify-mode" data-mode="consult">${text("请律师看看", "Ask a lawyer")}</button></div>
+    ${state.clarifyMode === "direct" ? `<article class="clarify-path-card direct"><i>直</i><div><h4>${text("把选中的范围发给对方确认", "Ask the other person to confirm the selected scope")}</h4><p>${text("生成克制的确认页面：先核对付款事实，再询问款项性质、是否返还及期限。正式小程序中由你主动转发给微信联系人。", "Create a neutral confirmation page covering payment facts, purpose, repayment, and timing. In the Mini Program, you would choose whether to share it.")}</p>${selectedRelationCount > 1 ? `<small>${text("一次只能向同一段关系中的对方发起确认，请缩小范围。", "A confirmation can only cover one relationship at a time. Narrow the selection.")}</small>` : ""}<button data-action="prepare-direct" ${directReady ? "" : "disabled"}>${text("生成对方确认内容", "Create confirmation content")}</button></div></article>` : `<article class="clarify-path-card lawyer"><i>询</i><div><h4>${text("整理成一份咨询材料", "Prepare a consultation summary")}</h4><p>${text("把选中的记录、材料完整度和你的说明整理成事实摘要。小程序不绑定任何律所或律师，最后由你主动转发给自己选择的律师。", "Turn the selected entries, evidence status, and your note into a factual summary. The Mini Program is not tied to any lawyer or firm; you choose whom to share it with.")}</p><button data-action="prepare-consultation" ${selectedRecords.length ? "" : "disabled"}>${text("整理咨询材料", "Prepare consultation material")}</button></div></article>`}
+    <p class="disclaimer">${text("单方记录、对方确认和正式电子签署的效力不同。当前网页原型只做本地预览，不创建真实微信链接，也不向任何律师或机构发送数据。", "A private note, the other person's confirmation, and a formal e-signature have different effects. This web prototype only previews locally: it creates no real WeChat link and sends nothing to any lawyer or organization.")}</p>
     ${renderLegalKnowledge()}
   `;
 }
@@ -747,7 +747,7 @@ function renderMe() {
       <div class="settings-row"><div><b>${text("月度累计提醒线", "Monthly total line")}</b><span>${text("本月累计达到后提醒你回看", "Review when the monthly total reaches it")}</span></div><input type="number" min="0" data-setting="monthlyLimit" value="${state.data.settings.monthlyLimit}"></div>
       <div class="settings-row"><div><b>${text("年度累计提醒线", "Yearly total line")}</b><span>${text("本年累计达到后提醒你回看", "Review when the yearly total reaches it")}</span></div><input type="number" min="0" data-setting="yearlyLimit" value="${state.data.settings.yearlyLimit}"></div>
       <div class="settings-row"><div><b>${text("单笔大额提醒线", "Single large-payment line")}</b><span>${text("达到后提醒这笔值得留下", "Suggest keeping a record")}</span></div><input type="number" min="0" data-setting="singleLimit" value="${state.data.settings.singleLimit}"></div>
-      <div class="settings-row"><div><b>${text("法律关注提醒线", "Legal-attention line")}</b><span>${text("建议整理材料而非直接下结论", "Organize facts before drawing conclusions")}</span></div><input type="number" min="0" data-setting="lawyerLine" value="${state.data.settings.lawyerLine}"></div>
+      <div class="settings-row"><div><b>${text("材料整理提醒线", "Record-review line")}</b><span>${text("累计达到后，提醒你检查截图、附言和上下文", "Remind you to check screenshots, memos, and context")}</span></div><input type="number" min="0" data-setting="lawyerLine" value="${state.data.settings.lawyerLine}"></div>
     </div>
     <p class="local-reminder-note">${text("这些金额全部由你自行设置，不代表法律标准；某项填写 0，表示关闭该类金额提醒。", "You set every amount yourself. They are not legal standards; enter 0 to turn off that reminder.")}</p>
     <div class="section-head"><h3>${text("关系状态提醒", "Relationship status reminder")}</h3><button data-action="preview-inactivity">${text("预览提醒", "Preview")}</button></div>
@@ -755,15 +755,16 @@ function renderMe() {
       <div class="settings-row"><div><b>${text("开启通知", "Enable notifications")}</b><span>${text("长期没有记录时，提醒你确认关系状态", "Check in after a long gap")}</span></div><button class="toggle-control ${state.data.settings.notificationsEnabled ? "on" : ""}" role="switch" aria-checked="${state.data.settings.notificationsEnabled}" data-action="toggle-notifications"><i></i></button></div>
       <div class="settings-row"><div><b>${text("多久没有记录后提醒", "Remind after no records for")}</b><span>${text("按当前关系最后一笔记录计算", "Counted from the latest entry")}</span></div><div class="number-suffix"><input type="number" min="7" data-setting="inactivityDays" value="${state.data.settings.inactivityDays}"><em>${text("天", "days")}</em></div></div>
     </div>
-    <p class="local-reminder-note">${text("当前是纯本地原型：应用内提醒可以体验；浏览器通知需由你主动授权，并且页面关闭后不能保证后台送达。正式小程序需接入微信订阅消息或服务号。", "This is a local prototype. In-app reminders work here; browser notifications require your permission and may not arrive after the page closes. A production app needs a compliant messaging service.")}</p>
+    <p class="local-reminder-note">${text("当前是纯本地原型：应用内提醒可以体验；浏览器通知需由你主动授权，并且页面关闭后不能保证后台送达。正式小程序需接入合规的微信订阅消息。", "This is a local prototype. In-app reminders work here; browser notifications require your permission and may not arrive after the page closes. A production Mini Program needs compliant subscription messages.")}</p>
     <div class="section-head"><h3>${text("正式小程序阶段", "Production-stage requirements")}</h3></div>
     <div class="settings-card">
       <div class="roadmap-item"><i class="roadmap-dot"></i><div><b>${text("聊天截图多选与顺序整理", "Multi-select and order chat screenshots")}</b><span>${text("只处理用户主动选择的截图，不读取微信文字聊天记录。", "Only user-selected screenshots are processed; text chat history is not read.")}</span></div></div>
       <div class="roadmap-item"><i class="roadmap-dot"></i><div><b>${text("双方确认与可靠电子签", "Mutual confirmation and reliable e-signing")}</b><span>${text("需要身份核验、版本固化、时间记录和签署服务。", "Identity checks, fixed versions, timestamps, and a signing service are needed.")}</span></div></div>
-      <div class="roadmap-item"><i class="roadmap-dot"></i><div><b>${text("订阅消息或服务号提醒", "Compliant reminder delivery")}</b><span>${text("需要遵守微信消息模板、用户订阅和发送场景限制。", "Messages must follow platform consent, template, and sending rules.")}</span></div></div>
+      <div class="roadmap-item"><i class="roadmap-dot"></i><div><b>${text("用户主动转发咨询材料", "User-initiated consultation sharing")}</b><span>${text("只临时保存用户确认分享的副本，并提供有效期、撤回和删除。", "Only the confirmed shared copy is stored temporarily, with expiry, revocation, and deletion.")}</span></div></div>
+      <div class="roadmap-item"><i class="roadmap-dot"></i><div><b>${text("微信订阅消息提醒", "Compliant reminder delivery")}</b><span>${text("需要遵守微信消息模板、用户订阅和发送场景限制。", "Messages must follow platform consent, template, and sending rules.")}</span></div></div>
     </div>
     <div class="section-head"><h3>${text("隐私与数据", "Privacy & data")}</h3><button data-action="show-privacy">${text("打开隐私中心", "Open privacy center")}</button></div>
-    <article class="privacy-summary-card"><div><i>本地</i><span><b>${text("记录默认不出设备", "Records stay on device")}</b><small>${text("律师共享与后台同步均未开启", "Lawyer sharing and cloud sync are off")}</small></span></div><button data-action="show-privacy">${text("管理", "Manage")}</button></article>
+    <article class="privacy-summary-card"><div><i>本地</i><span><b>${text("记录默认不出设备", "Records stay on device")}</b><small>${text("不绑定律所 · 不自动共享 · 不后台同步", "No firm tie-in · no automatic sharing or sync")}</small></span></div><button data-action="show-privacy">${text("管理", "Manage")}</button></article>
     <button class="danger-link" data-action="reset-demo">${text("恢复初始演示数据", "Reset demo data")}</button>
   `;
 }
@@ -941,7 +942,7 @@ function showRecord(id) {
         ${r.transferMemo ? `<div class="detail-line"><span>${text("转账附言", "Transfer memo")}</span><b>${escapeHTML(r.transferMemo)}</b></div>` : ""}
         ${r.dueDate ? `<div class="detail-line"><span>${text("期望还款日", "Expected repayment date")}</span><b>${formatDate(r.dueDate)}</b></div>` : ""}
       </div>
-      ${canClarify ? `<article class="record-evidence-note"><b>${text("律师会先核对这笔钱的上下文", "A lawyer will first check the context")}</b><p>${text(`付款截图：${r.image ? "已有" : "未添加"} · 转账附言：${r.transferMemo ? "已有" : "未添加"} · 自己留下的话：${r.note ? "已有" : "未添加"}`, `Payment screenshot: ${r.image ? "saved" : "not added"} · Transfer memo: ${r.transferMemo ? "saved" : "not added"} · Your note: ${r.note ? "saved" : "not added"}`)}</p><small>${text("再确认是否保留了前后聊天、通话录音、短信、邮件、借条或后续还款记录。", "Also check for surrounding chats, call recordings, texts, email, an IOU, or later repayments.")}</small></article>` : ""}
+      ${canClarify ? `<article class="record-evidence-note"><b>${text("需要说清或咨询时，先核对这笔钱的上下文", "Check the context before clarification or consultation")}</b><p>${text(`付款截图：${r.image ? "已有" : "未添加"} · 转账附言：${r.transferMemo ? "已有" : "未添加"} · 自己留下的话：${r.note ? "已有" : "未添加"}`, `Payment screenshot: ${r.image ? "saved" : "not added"} · Transfer memo: ${r.transferMemo ? "saved" : "not added"} · Your note: ${r.note ? "saved" : "not added"}`)}</p><small>${text("再确认是否保留了前后聊天、通话录音、短信、邮件、借条或后续还款记录。", "Also check for surrounding chats, call recordings, texts, email, an IOU, or later repayments.")}</small></article>` : ""}
       ${r.note ? `<article class="insight-card sage" style="margin-top:12px"><h4>${text("当时记下的话", "Your note at the time")}</h4><p>${escapeHTML(r.note)}</p></article>` : ""}
       <div class="modal-actions">
         ${canClarify ? `<button class="secondary-button" data-action="generate-doc" data-id="${r.id}">${text("生成沟通草稿", "Create a conversation draft")}</button>` : ""}
@@ -1000,24 +1001,24 @@ function prepareDirect() {
   </div></div>`;
 }
 
-function prepareLawyer() {
+function prepareConsultation() {
   const records = selectedClarifyRecords();
   if (!records.length) return toast(text("请先选择至少一笔记录", "Select at least one entry"));
   const amount = records.reduce((sum, record) => sum + Number(record.amount), 0);
   const screenshots = records.filter(record => record.image).length;
   const memos = records.filter(record => record.transferMemo).length;
   document.getElementById("modalRoot").innerHTML = `<div class="modal-backdrop"><div class="modal-card">
-    <div class="modal-head"><div><small class="modal-kicker">${text("开不了口模式 · 律师留言", "Lawyer-first mode · Message")}</small><h3>${text("先告诉律师发生了什么", "Tell the lawyer what happened")}</h3></div><button class="close-button" data-action="close-modal">×</button></div>
+    <div class="modal-head"><div><small class="modal-kicker">${text("咨询材料 · 本地整理", "Consultation material · Local preparation")}</small><h3>${text("先把需要咨询的事实整理好", "Organize the facts you want advice on")}</h3></div><button class="close-button" data-action="close-modal">×</button></div>
     <div class="lawyer-package-summary"><div><span>${text("选中记录", "Selected")}</span><b>${records.length} ${text("笔", "entries")}</b></div><div><span>${text("合计金额", "Total")}</span><b>¥${money(amount)}</b></div><div><span>${text("已有图片", "Images")}</span><b>${screenshots}/${records.length}</b></div><div><span>${text("已有附言", "Memos")}</span><b>${memos}/${records.length}</b></div></div>
-    <div class="form-field"><label>${text("想先对律师说的话（可不填）", "What would you like the lawyer to know? (optional)")}</label><textarea id="lawyerMessage" rows="5" placeholder="${text("例如：这些钱我一直没好意思问，现在想知道该先怎么整理和沟通。", "For example: I have not known how to raise this and want advice on organizing the facts first.")}"></textarea></div>
-    <article class="privacy-status"><span>私</span><div><b>${text("此刻仍未发送", "Nothing has been sent")}</b><p>${text("下一步只展示将提交给律所公众号后台的完整内容。正式版还需显示接收律所、用途、保存期限和删除方式。", "The next step only previews the complete submission. A production version must identify the law firm, purpose, retention period, and deletion method.")}</p></div></article>
-    <div class="modal-actions"><button class="secondary-button" data-action="close-modal">${text("暂不处理", "Not now")}</button><button class="primary-button" data-action="preview-lawyer-package">${text("查看提交前预览", "Review before submission")}</button></div>
+    <div class="form-field"><label>${text("给咨询律师的说明（可不填）", "A note for the lawyer you choose (optional)")}</label><textarea id="consultationMessage" rows="5" placeholder="${text("例如：这些钱我一直没好意思问，现在想知道该先怎么整理和沟通。", "For example: I have not known how to raise this and want advice on organizing the facts first.")}"></textarea></div>
+    <article class="privacy-status"><span>私</span><div><b>${text("此刻仍只在你的设备上", "Still on your device")}</b><p>${text("下一步只是完整预览。小程序不会预设或推荐接收律师；正式转发时，由你自己选择微信联系人。", "The next step is only a full preview. The app does not preselect or recommend a lawyer; you choose the WeChat contact when sharing.")}</p></div></article>
+    <div class="modal-actions"><button class="secondary-button" data-action="close-modal">${text("暂不处理", "Not now")}</button><button class="primary-button" data-action="preview-consultation-package">${text("查看完整预览", "Review full material")}</button></div>
   </div></div>`;
 }
 
-function previewLawyerPackage() {
+function previewConsultationPackage() {
   const records = selectedClarifyRecords().sort((a, b) => a.date.localeCompare(b.date));
-  const message = document.getElementById("lawyerMessage")?.value.trim() || text("未填写", "Not provided");
+  const message = document.getElementById("consultationMessage")?.value.trim() || text("未填写", "Not provided");
   const relationGroups = new Map();
   records.forEach(record => {
     if (!relationGroups.has(record.relationshipId)) relationGroups.set(record.relationshipId, []);
@@ -1029,13 +1030,13 @@ function previewLawyerPackage() {
   }).join("\n\n");
   const total = records.reduce((sum, record) => sum + Number(record.amount), 0);
   const body = en()
-    ? `Law Firm Official Account Message Package (Preview)\n\nUser's message:\n${message}\n\nSelected scope: ${records.length} entries, total ¥${money(total)}\n\n${groups}\n\nEvidence to check: surrounding chats, call recordings, texts, email, IOUs, and later repayments.\n\nThis package contains one person's records only and requires lawyer review.`
-    : `律所公众号后台留言包（提交前预览）\n\n一、用户留言\n${message}\n\n二、选中范围\n共 ${records.length} 笔，合计人民币 ${money(total)} 元\n\n${groups}\n\n三、建议进一步核对\n前后聊天、通话录音、短信、邮件、借条及后续还款记录。\n\n本材料仅整理用户单方记录，款项性质和处理路径仍需律师结合完整材料判断。`;
+    ? `Legal Consultation Fact Summary (Sharing Preview)\n\nYour note:\n${message}\n\nSelected scope: ${records.length} entries, total ¥${money(total)}\n\n${groups}\n\nEvidence to check: surrounding chats, call recordings, texts, email, IOUs, and later repayments.\n\nThis package contains one person's records only. It is not a legal conclusion and should be reviewed with the lawyer you choose.`
+    : `法律咨询事实材料（转发预览）\n\n一、我的说明\n${message}\n\n二、选中范围\n共 ${records.length} 笔，合计人民币 ${money(total)} 元\n\n${groups}\n\n三、建议进一步核对\n前后聊天、通话录音、短信、邮件、借条及后续还款记录。\n\n本材料仅整理用户单方记录，不构成法律结论；款项性质和处理路径仍需你自行选择的律师结合完整材料判断。`;
   document.getElementById("modalRoot").innerHTML = `<div class="modal-backdrop"><div class="modal-card">
-    <div class="modal-head"><div><small class="modal-kicker">${text("发送前的最后一步", "Final step before submission")}</small><h3>${text("律所后台将看到这些", "What the law firm would receive")}</h3></div><button class="close-button" data-action="close-modal">×</button></div>
+    <div class="modal-head"><div><small class="modal-kicker">${text("转发前的最后一步", "Final step before sharing")}</small><h3>${text("你准备转发这些材料", "Material you are preparing to share")}</h3></div><button class="close-button" data-action="close-modal">×</button></div>
     <div class="document-preview" id="documentText">${escapeHTML(body)}</div>
-    <p class="disclaimer">${text("当前原型没有连接律所公众号后台。点击“模拟提交”只验证交互，不会上传任何记录、图片或留言。", "This prototype is not connected to a law-firm inbox. Simulated submission uploads nothing.")}</p>
-    <div class="modal-actions"><button class="secondary-button" data-action="download-lawyer-package">${text("下载自己留存", "Download a copy")}</button><button class="primary-button" data-action="prototype-submit-lawyer">${text("模拟提交", "Simulate submission")}</button></div>
+    <p class="disclaimer">${text("当前网页原型没有临时分享服务器。点击“预览微信转发”不会上传或发送数据；正式版只有在你确认后，才会为所选副本生成可撤销、会过期的分享链接。", "This web prototype has no temporary sharing service. Previewing WeChat sharing uploads and sends nothing. A production version would create a revocable, expiring link for the selected copy only after your confirmation.")}</p>
+    <div class="modal-actions"><button class="secondary-button" data-action="download-consultation-package">${text("下载自己留存", "Download a copy")}</button><button class="primary-button" data-action="prototype-wechat-share">${text("预览微信转发", "Preview WeChat share")}</button></div>
   </div></div>`;
 }
 
@@ -1193,7 +1194,7 @@ function simpleModal(title, content, button = text("知道了", "Done")) {
 }
 
 function showEvidenceChecklist() {
-  simpleModal(text("律师通常先看这些", "What a lawyer usually checks first"), `
+  simpleModal(text("咨询或核对前，先看这些", "Check these before advice or confirmation"), `
     <div class="lawyer-checklist">
       <article><i>1</i><div><b>${text("付款或转账截图", "Payment or transfer screenshot")}</b><p>${text("看金额、时间、收款方、交易单号和完整页面。", "Check the amount, time, recipient, transaction ID, and full screen.")}</p></div></article>
       <article><i>2</i><div><b>${text("前后完整对话", "The surrounding conversation")}</b><p>${text("不只截一句“收到”，要保留借钱原因、是否承诺返还、用途和后续催款。", "Keep more than a single “received” message: preserve the reason, any promise to repay, purpose, and follow-up requests.")}</p></div></article>
@@ -1203,22 +1204,22 @@ function showEvidenceChecklist() {
     <p class="disclaimer">${text("原型只提醒材料种类，不读取、不上传这些内容。不要只保留裁剪图；是否能作为证据及证明力大小，应结合原始载体和具体案件判断。", "The prototype only reminds you what may exist; it does not read or upload any of it. Keep originals, not only cropped images. Admissibility and weight depend on the original data and the specific case.")}</p>`);
 }
 
-function showLawyerBoundary() {
-  simpleModal(text("联系律师前，由你决定分享什么", "You decide what a lawyer receives"), `
+function showShareBoundary() {
+  simpleModal(text("对外分享前，由你决定分享什么", "You decide what leaves your device"), `
     <div class="privacy-flow">
       <article><i>1</i><div><b>${text("默认关闭", "Off by default")}</b><p>${text("日常记录、关系称呼和截图不会因为金额达到提醒线而自动发送。", "Reaching a reminder threshold never sends records, relationship names, or screenshots.")}</p></div></article>
       <article><i>2</i><div><b>${text("逐项选择", "Choose item by item")}</b><p>${text("正式版应先让你选择具体记录、是否包含截图和联系方式，再展示完整预览。", "A production version must let you choose specific records, whether screenshots are included, and contact details, followed by a full preview.")}</p></div></article>
-      <article><i>3</i><div><b>${text("一次授权", "One-time authorization")}</b><p>${text("只有你确认本次咨询及材料范围后，选中的副本才可加密传给指定律师。", "Only after you confirm the consultation and its scope may selected copies be encrypted and sent to the chosen lawyer.")}</p></div></article>
-      <article><i>4</i><div><b>${text("可查、可撤、可删", "Review, revoke, delete")}</b><p>${text("正式版需显示接收人、访问记录、保存期限，并提供撤回授权和申请删除入口。", "A production version must show recipients, access history, retention, revocation, and deletion controls.")}</p></div></article>
+      <article><i>3</i><div><b>${text("确认后才生成分享副本", "Create a shared copy only after confirmation")}</b><p>${text("跨设备查看需要临时分享服务。只有你确认后，所选副本才可加密上传并生成随机链接；未选记录仍留在本地。", "Cross-device viewing needs a temporary sharing service. Only after confirmation may the selected copy be encrypted and assigned a random link; unselected records stay local.")}</p></div></article>
+      <article><i>4</i><div><b>${text("联系人由你选择", "You choose the recipient")}</b><p>${text("产品不绑定、不推荐任何律所或律师。你在微信转发界面自行选择联系人，分享链接应支持到期、撤回和删除。", "The product is tied to no lawyer or firm. You choose the contact in WeChat, and the shared link should support expiry, revocation, and deletion.")}</p></div></article>
     </div>
-    <p class="privacy-strong-note">${text("当前原型没有律师账户、上传接口或发送按钮。生成事项摘要只会下载到你的设备。", "This prototype has no lawyer account, upload endpoint, or send button. Creating a matter summary only downloads it to your device.")}</p>`);
+    <p class="privacy-strong-note">${text("当前原型没有分享服务器或真实微信链接。所有转发按钮只展示预览，不会上传或发送任何数据。", "This prototype has no sharing server or real WeChat link. Sharing buttons only preview the flow and upload or send nothing.")}</p>`);
 }
 
 function showPrivacyCenter() {
   const stats = privacyStats();
   document.getElementById("modalRoot").innerHTML = `<div class="modal-backdrop"><div class="modal-card privacy-center">
     <div class="modal-head"><div><small>${text("隐私中心", "Privacy center")}</small><h3>${text("你的记录，默认只属于你", "Your records stay private by default")}</h3></div><button class="close-button" data-action="close-modal">×</button></div>
-    <article class="privacy-status"><span>✓</span><div><b>${text("当前未连接业务服务器", "No application server connected")}</b><p>${text("没有账户同步、微信钱包读取、律师共享或后台上传。", "No account sync, WeChat wallet access, lawyer sharing, or background upload.")}</p></div></article>
+    <article class="privacy-status"><span>✓</span><div><b>${text("当前未连接业务服务器", "No application server connected")}</b><p>${text("没有账户同步、微信钱包读取、自动共享或后台上传。", "No account sync, WeChat wallet access, automatic sharing, or background upload.")}</p></div></article>
     <div class="privacy-stat-grid">
       <div><strong>${stats.relationships}</strong><span>${text("段关系", "relationships")}</span></div>
       <div><strong>${stats.records}</strong><span>${text("笔记录", "records")}</span></div>
@@ -1230,7 +1231,7 @@ function showPrivacyCenter() {
       <article><b>${text("你主动选择的截图", "Screenshots you select")}</b><p>${text("只处理选中的图片，压缩后保存在本地；不读取整个相册，也不做后台上传。", "Only the selected image is processed and compressed locally. The app does not read the whole album or upload in the background.")}</p></article>
       <article><b>${text("提醒", "Reminders")}</b><p>${text("当前仅在应用打开时计算，浏览器通知另行请求授权。正式微信提醒必须再次由用户订阅，并只保存发送所需的最少信息。", "Currently calculated while the app is open; browser notifications require separate permission. Production WeChat reminders must require a separate subscription and retain only what is needed to send them.")}</p></article>
     </div>
-    <div class="privacy-boundary"><b>${text("只有两个动作可能离开本地", "Only two future actions may leave the device")}</b><p>${text("① 你主动订阅微信提醒；② 你主动发起律师咨询并确认分享范围。两者都不能使用一次总授权代替。", "1. You actively subscribe to WeChat reminders. 2. You start a lawyer consultation and confirm what to share. Neither may be covered by one blanket consent.")}</p><button data-action="show-lawyer-boundary">${text("查看律师介入边界", "See lawyer-sharing boundary")}</button></div>
+    <div class="privacy-boundary"><b>${text("只有两个动作可能离开本地", "Only two future actions may leave the device")}</b><p>${text("① 你主动订阅微信提醒；② 你主动生成给对方或律师的临时分享副本。两者都必须分别确认，不能使用一次总授权代替。", "1. You actively subscribe to WeChat reminders. 2. You create a temporary shared copy for the other person or a lawyer. Each requires separate confirmation; one blanket consent is not enough.")}</p><button data-action="show-share-boundary">${text("查看对外分享边界", "See sharing boundary")}</button></div>
     <p class="disclaimer">${text("本地保存不等于加密证据保管。请勿将当前原型作为唯一备份；点击法律小课的官方链接会打开外部网站，但不会附带你的记录。", "Local storage is not an encrypted evidence vault. Do not use this prototype as your only backup. Official legal links open external websites without attaching your records.")}</p>
     <div class="privacy-actions"><button class="secondary-button" data-action="export-local-data">${text("导出本地备份", "Export local backup")}</button><button class="privacy-delete" data-action="clear-local-data">${text("清除全部个人数据", "Delete all personal data")}</button></div>
   </div></div>`;
@@ -1336,13 +1337,12 @@ document.addEventListener("click", async event => {
   if (action === "clear-clarify-selection") { state.clarifySelected = []; render({ preserveScroll: true }); }
   if (action === "set-clarify-mode") { state.clarifyMode = target.dataset.mode; render(); }
   if (action === "prepare-direct") prepareDirect();
-  if (action === "prepare-lawyer") prepareLawyer();
-  if (action === "preview-lawyer-package") previewLawyerPackage();
+  if (action === "prepare-consultation") prepareConsultation();
+  if (action === "preview-consultation-package") previewConsultationPackage();
   if (action === "prototype-wechat-share") toast(text("正式小程序中将由你主动选择微信联系人；当前没有生成或发送链接", "In the Mini Program you would choose a contact; no link was created or sent here"));
-  if (action === "prototype-submit-lawyer") toast(text("原型未连接律所后台，本次没有发送任何数据", "No law-firm inbox is connected; nothing was sent"));
-  if (action === "download-lawyer-package") {
+  if (action === "download-consultation-package") {
     const packageText = document.getElementById("documentText")?.innerText || "";
-    downloadText(text("律所咨询留言包.txt", "law-firm-message-package.txt"), packageText);
+    downloadText(text("法律咨询事实材料.txt", "legal-consultation-fact-summary.txt"), packageText);
   }
   if (action === "record-detail") showRecord(target.dataset.id);
   if (action === "generate-doc") generateDocument(target.dataset.id);
@@ -1360,7 +1360,7 @@ document.addEventListener("click", async event => {
   if (action === "go-me") { state.page = "me"; render(); }
   if (action === "preview-inactivity") showInactivityReminder();
   if (action === "show-evidence-checklist") showEvidenceChecklist();
-  if (action === "show-lawyer-boundary") showLawyerBoundary();
+  if (action === "show-share-boundary") showShareBoundary();
   if (action === "show-law") showLaw(target.dataset.lawId);
   if (action === "export-local-data") exportLocalData();
   if (action === "clear-local-data") clearLocalData();
