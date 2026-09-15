@@ -414,10 +414,7 @@ function render({ preserveScroll = false } = {}) {
   const previousScrollTop = view.scrollTop;
   applyStaticLocale();
   const [title, dateLabel] = pageMeta[state.language][state.page];
-  const relation = scopedRelationship();
-  document.getElementById("pageTitle").textContent = state.page === "home" && state.perspective === "ideal" && relation
-    ? idealPageTitle(relation)
-    : title;
+  document.getElementById("pageTitle").textContent = title;
   document.getElementById("todayLabel").textContent = state.page === "home" ? fullDate() : dateLabel;
   document.querySelectorAll(".nav-item").forEach(btn => btn.classList.toggle("active", btn.dataset.page === state.page));
   view.innerHTML = renderRelationshipStrip() + ({ home: renderHome, records: renderRecords, clarify: renderClarify, me: renderMe })[state.page]();
@@ -473,7 +470,13 @@ function renderHome() {
   const streak = consecutiveMine();
   const inactivity = relation ? inactivityState(relation) : null;
   const selfCopy = relationSelfCopy(relation);
-  if (state.perspective === "ideal" && relation) return renderIdealHome({ relation, spend, limit, percent, streak });
+  const latestPaid = relation ? [...activeRecords()].sort((a,b) => b.date.localeCompare(a.date))[0] : null;
+  const idealResponse = state.perspective === "ideal" && relation ? `
+    <div class="ideal-inline-response ${relation.type}" aria-live="polite">
+      <span>${text("如果这份付出被认真看见", "If this contribution were truly seen")}</span>
+      <p>“${escapeHTML(idealVoiceForRecord(latestPaid))}”</p>
+      <small>${latestPaid ? `${formatDate(latestPaid.date)} · ${escapeHTML(displayRecordTitle(latestPaid))}` : text("从一笔记录开始", "Start with one record")} · ${text("这是理想回应，不代表现实中的对方真的这样想", "An ideal response, not a claim about reality")}</small>
+    </div>` : "";
   const insights = [];
 
   if (limit > 0 && spend >= limit) insights.push(`<article class="insight-card peach" data-action="go-me"><div class="insight-top"><div><h4>${text("你已越过自己设置的本月提醒线", "You have crossed your monthly reminder line")}</h4><p>${text("不是说你花错了，只是想问：这是你原本愿意承担的程度吗？", "This does not mean you spent wrongly. Is this still what you meant to take on?")}</p></div><span class="arrow">›</span></div></article>`);
@@ -487,6 +490,7 @@ function renderHome() {
     ${renderPerspectiveSwitch()}
     <section class="hero-card">
       <div class="hero-label">${selfCopy.hero}</div>
+      ${idealResponse}
       <div class="hero-value">¥ ${money(spend)}</div>
       <div class="hero-sub">${relation ? text("只记录你的支出 · 对方是否也有回应，由你自己观察", "Only your spending is recorded · You decide whether care is returned") : text(`${state.data.relationships.filter(item => item.id !== "empty-relation").length} 段关系 · ${monthRecords().length} 笔本月记录`, `${state.data.relationships.filter(item => item.id !== "empty-relation").length} relationships · ${monthRecords().length} entries this month`)}</div>
       <div class="hero-progress"><span style="width:${percent}%"></span></div>
@@ -530,28 +534,6 @@ function idealPerspectiveLabel(relation) {
   })[relation.type] || text("理想回应", "The ideal response");
 }
 
-function idealPageTitle(relation) {
-  return ({
-    friend: text("今天，好朋友会这样记得", "Today, through a good friend's response"),
-    dating: text("今天，如果约会被认真回应", "Today, if the date responded with care"),
-    matchmaking: text("今天，如果相亲对象认真回应", "Today, if the introduced date responded"),
-    ambiguous: text("今天，如果这份付出被看见", "Today, if this effort were seen"),
-    lover: text(`今天，${displayRelationName(relation)}这样看见你`, `Today, through ${displayRelationName(relation)}'s ideal eyes`),
-    spouse: text("今天，如果彼此都认真承担", "Today, if responsibility were truly shared")
-  })[relation.type] || text("今天，如果这份付出被看见", "Today, if this effort were seen");
-}
-
-function idealMeta(relation) {
-  return ({
-    friend: { hero: text("在一个真正的好朋友眼里", "Through a good friend's eyes"), sub: text("这个月，你为这段友谊承担的金额", "What you contributed to this friendship this month"), list: text("好朋友会默默记下", "A good friend would remember"), mirror: text("这是为付款方呈现的理想朋友回应，不代表现实中的朋友真的这样想。", "This is an imagined response from a good friend, not a claim about what your real friend thinks.") },
-    dating: { hero: text("如果对方尊重彼此的节奏", "If the other person respected the pace"), sub: text("这个月，你在这段约会中的投入", "What you put into this dating relationship this month"), list: text("认真了解你的人，也会看见这些", "Someone getting to know you would notice this"), mirror: text("这是理想回应，不代表现实中的对方已经承诺关系或回报。", "This is an ideal response, not a promise or commitment from the real person.") },
-    matchmaking: { hero: text("如果相亲中的投入被认真看见", "If your effort in this introduced date were seen"), sub: text("这个月，你为了解彼此承担的金额", "What you spent while getting to know each other"), list: text("合适的回应，不会把投入当作默认", "A respectful response would not take this for granted"), mirror: text("这是理想回应，不代表对方接受了特定关系或法律义务。", "This is an ideal response, not acceptance of a relationship or legal obligation.") },
-    ambiguous: { hero: text("如果含糊的关系也有清楚的尊重", "If an undefined relationship still showed clear respect"), sub: text("这个月，你在尚未说清的关系中的投入", "What you contributed while the relationship remained undefined"), list: text("关系可以含糊，尊重不该含糊", "The relationship may be undefined; respect should not be"), mirror: text("这是理想回应，不代表现实中的对方已确认关系或款项性质。", "This is an ideal response, not confirmation of the relationship or any payment's nature.") },
-    lover: { hero: text(`在理想中的${displayRelationName(relation)}眼里`, "Seen through an ideal response"), sub: text("这个月，你为这段感情认真付出的金额", "What you contributed to the relationship this month"), list: text("如果爱也认真看见付出", "If love also noticed the effort"), mirror: text(`这是为付款方呈现的“理想回应”，不代表现实中的${displayRelationName(relation)}真实这样想。`, "This is an imagined ideal response for the person who paid. It is not a claim about what the other person actually thinks.") },
-    spouse: { hero: text("如果共同生活真正看见彼此", "If shared life truly saw both people"), sub: text("这个月，你为共同生活承担的金额", "What you contributed to shared life this month"), list: text("共同生活，不该把一方的承担变成默认", "Shared life should not make one person's effort automatic"), mirror: text("这是理想中的共同承担，不代表对家庭财产或债务作出法律判断。", "This imagines shared responsibility; it is not a legal view on marital property or debt.") }
-  })[relation.type] || { hero: text("如果这份付出被认真看见", "If this effort were seen"), sub: text("这个月，你认真付出的金额", "What you contributed this month"), list: text("理想回应", "An ideal response"), mirror: text("这只是理想回应，不代表现实中的对方真实这样想。", "This is only an ideal response, not a claim about reality.") };
-}
-
 function idealVoiceForRecord(record) {
   const relation = record ? relationshipById(record.relationshipId) : scopedRelationship() || activeRelationship();
   if (!record) return relation.type === "friend"
@@ -569,30 +551,6 @@ function idealVoiceForRecord(record) {
   if (record.category === "transfer") return text("你愿意在我需要的时候转这笔钱，但工作和赚钱都不容易。我应该主动把安排说清楚。", "You transferred this when I needed it, but earning money is never effortless. I should clarify the arrangement.");
   if (record.category === "dining") return text("今天又是你付钱。工作都不容易，我会好好记得。下次该我来。", "You paid again today. We both work hard, and I will remember that. Next time should be on me.");
   return text("你的付出不是理所当然。我会认真记住，也会在下一次主动回应。", "Your contribution is not automatic. I would remember it and respond more actively next time.");
-}
-
-function renderIdealHome({ relation, spend, limit, percent, streak }) {
-  const latestPaid = [...activeRecords()].sort((a,b) => b.date.localeCompare(a.date))[0];
-  const meta = idealMeta(relation);
-  return `
-    ${renderPerspectiveSwitch()}
-    <section class="hero-card ideal-hero">
-      <div class="hero-label">${meta.hero}</div>
-      <div class="hero-value">¥ ${money(spend)}</div>
-      <div class="hero-sub">${meta.sub}</div>
-      <div class="hero-progress"><span style="width:${percent}%"></span></div>
-      <div class="hero-foot"><span>${text("每一笔都值得被看见", "Every contribution deserves to be seen")}</span><span>${text(`近30天 ${streak} 次记录`, `${streak} entries in 30 days`)}</span></div>
-    </section>
-    <article class="ideal-voice">
-      <small>${text("如果这份付出被认真看见", "If this contribution were truly seen")}</small>
-      <h4>${escapeHTML(idealVoiceForRecord(latestPaid))}</h4>
-      <p>${latestPaid ? `${formatDate(latestPaid.date)} · ${escapeHTML(displayRecordTitle(latestPaid))} · ¥${money(latestPaid.amount)}` : text("从一笔记录开始", "Start with one record")}</p>
-    </article>
-    <p class="mirror-note">${meta.mirror}</p>
-    ${renderEntryGrid()}
-    <div class="section-head"><h3>${meta.list}</h3><button data-action="show-ideal-meaning">${text("这是什么？", "What is this?")}</button></div>
-    ${[...activeRecords()].sort((a,b) => b.date.localeCompare(a.date)).slice(1,3).map(r => `<article class="insight-card peach"><h4>${escapeHTML(idealVoiceForRecord(r))}</h4><p>${formatDate(r.date)} · ${escapeHTML(displayRecordTitle(r))} · ¥${money(r.amount)}</p></article>`).join("")}
-  `;
 }
 
 function renderRecordCards(records) {
@@ -1321,7 +1279,7 @@ document.addEventListener("click", async event => {
     state.draft.counterparty = relationshipById(target.dataset.id).name;
     renderAddModal();
   }
-  if (action === "set-perspective") { state.perspective = target.dataset.perspective; render(); }
+  if (action === "set-perspective") { state.perspective = target.dataset.perspective; render({ preserveScroll: true }); }
   if (action === "close-modal") closeModal();
   if (action === "next-step" && validateDraftStep()) { state.addStep += 1; renderAddModal(); }
   if (action === "prev-step") { syncDraftInputs(); state.addStep -= 1; renderAddModal(); }
@@ -1372,11 +1330,6 @@ document.addEventListener("click", async event => {
   if (action === "toggle-notifications") await toggleNotifications();
   if (action === "show-reflection") simpleModal("后来不太舒服的支出", `<article class="insight-card peach"><h4>本月合计 ¥${money(regretAmount())}</h4><p>这些记录被你标记为“有点后悔”或“心里没底”。数字并不说明你做错了，只是提醒你看看当时发生了什么。</p></article>${renderRecordCards(monthRecords().filter(r => ["regret","uneasy"].includes(r.feeling)))}`);
   if (action === "show-principle") simpleModal(text("提醒原则", "Reminder principles"), `<article class="insight-card sage"><h4>${text("尊重你自己", "Respect yourself")}</h4><p>${text("记录下来，就是对你自己付出的尊重。都是你的血汗钱，值得被认真看见。", "Keeping a record respects the work behind what you gave. Your money deserves to be seen clearly.")}</p></article><article class="insight-card peach"><h4>${text("平等，不是计较", "Equality is not scorekeeping")}</h4><p>${text("你们是平等的主体，彼此的劳动、金钱与心意都应该互相尊重。", "Both people are equal. Each person's work, money, and care deserve mutual respect.")}</p></article><article class="insight-card quiet-alert"><h4>${text("只记录真正需要看见的", "Record what truly needs to be seen")}</h4><p>${text("不鼓励逐笔记录小额日常；更值得关注的是大额给付、长期单方面付款，以及需要留存事实的支出。", "Do not log every small daily purchase. Focus on larger payments, long one-sided patterns, and facts that may matter later.")}</p></article>`);
-  if (action === "show-ideal-meaning") {
-    const relation = scopedRelationship() || activeRelationship();
-    const meta = idealMeta(relation);
-    simpleModal(text("理想回应，不是现实推断", "An ideal response, not a claim about reality"), `<article class="insight-card peach"><h4>${meta.list}</h4><p>${text("这段话只给付款方看，是把你可能期待却没有说出口的尊重呈现出来。它不代表现实中的对方真的这样想，也不会发送给对方。", "This voice is only for the person who paid. It gives words to the respect you may wish to hear, but does not claim the real person thinks this, and nothing is sent.")}</p></article>`);
-  }
   if (action === "show-privacy") showPrivacyCenter();
   if (action === "reset-demo") { if (confirm(text("确定恢复初始演示数据吗？你新增的本地记录会被清除。", "Reset the demo? Your local records will be removed."))) { state.data = defaultData(); state.relationshipScope = "all"; state.clarifySelected = []; state.perspective = "self"; saveData(); render(); toast(text("已恢复演示数据", "Demo data reset")); } }
 });
