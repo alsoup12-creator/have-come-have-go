@@ -270,6 +270,17 @@ button { color: inherit; }
 .page-intro { padding: 3px 2px 8px; }
 .page-intro h3 { margin: 0 0 7px; font-size: 20px; }
 .page-intro p { margin: 0; font-size: 11px; color: var(--muted); line-height: 1.65; }
+.record-toolbox { margin: 12px 0 4px; padding: 12px; border: 1px solid var(--line); border-radius: 17px; background: #f8f7f3; }
+.record-period-pickers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.record-period-pickers label > span { display: block; margin: 0 0 5px 2px; color: var(--muted); font-size: 8px; }
+.record-period-pickers select { width: 100%; border: 1px solid #dedbd4; border-radius: 11px; padding: 8px 9px; background: white; color: var(--ink); font-size: 10px; outline: 0; }
+.record-period-pickers select:focus { border-color: var(--sage); box-shadow: 0 0 0 3px rgba(111,142,123,.1); }
+.record-sort-row { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 8px; margin-top: 10px; }
+.record-sort-row > span { color: var(--muted); font-size: 8px; }
+.record-sort-row > div { display: flex; gap: 5px; padding: 3px; border-radius: 10px; background: #eceae5; }
+.record-sort-button { border: 0; border-radius: 8px; padding: 6px 9px; background: transparent; color: #626a65; font-size: 9px; cursor: pointer; }
+.record-sort-button.active { background: white; color: var(--ink); box-shadow: 0 1px 5px rgba(35,43,39,.08); font-weight: 700; }
+.record-sort-row small { min-width: 0; color: var(--muted); font-size: 7px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .filter-row { display: flex; gap: 7px; overflow-x: auto; margin: 12px 0; scrollbar-width: none; }
 .filter-chip { border: 1px solid var(--line); background: white; border-radius: 20px; padding: 7px 11px; font-size: 10px; white-space: nowrap; cursor: pointer; }
 .filter-chip.active { background: var(--ink); color: white; border-color: var(--ink); }
@@ -458,6 +469,7 @@ button { color: inherit; }
 }
 .form-field input:focus, .form-field textarea:focus, .form-field select:focus { border-color: var(--sage); box-shadow: 0 0 0 3px rgba(111,142,123,.1); }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-grid-three { grid-template-columns: 1.05fr 1.2fr .85fr; }
 .upload-zone {
   border: 1px dashed #bdc9c0; border-radius: 18px; min-height: 112px; padding: 16px;
   display: grid; place-items: center; text-align: center; background: #f7faf7; cursor: pointer; overflow: hidden;
@@ -465,6 +477,24 @@ button { color: inherit; }
 .upload-zone img { width: 100%; max-height: 190px; object-fit: contain; border-radius: 10px; }
 .upload-zone b { display: block; font-size: 12px; margin-bottom: 5px; }
 .upload-zone span { display: block; font-size: 9px; color: var(--muted); line-height: 1.5; }
+.ocr-panel { margin: 10px 0 14px; padding: 12px; border: 1px solid #d8e5dc; border-radius: 15px; background: #f4f9f5; }
+.ocr-panel-head { display: flex; align-items: center; gap: 9px; }
+.ocr-panel-head > div { min-width: 0; flex: 1; }
+.ocr-panel-head b, .ocr-panel-head small { display: block; }
+.ocr-panel-head b { font-size: 10px; }
+.ocr-panel-head small { margin-top: 3px; color: var(--muted); font-size: 8px; line-height: 1.45; }
+.ocr-panel-head strong { color: var(--sage-dark); font-size: 9px; }
+.ocr-spinner, .ocr-check { display: grid; place-items: center; flex: 0 0 auto; width: 25px; height: 25px; border-radius: 50%; background: #dcece0; color: var(--sage-dark); font-size: 10px; font-style: normal; font-weight: 800; }
+.ocr-spinner { border: 2px solid #dcece0; border-top-color: var(--sage-dark); background: transparent; animation: ocrSpin .9s linear infinite; }
+.ocr-progress-track { height: 4px; margin-top: 10px; overflow: hidden; border-radius: 5px; background: #dfe8e1; }
+.ocr-progress-track i { display: block; height: 100%; border-radius: inherit; background: var(--sage); transition: width .2s ease; }
+.ocr-panel p { margin: 8px 0 0; color: var(--muted); font-size: 8px; line-height: 1.55; }
+.ocr-field-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.ocr-field-chips span { padding: 5px 7px; border-radius: 999px; background: white; color: #4f6657; font-size: 8px; }
+.ocr-panel button { margin-top: 8px; border: 0; padding: 0; background: transparent; color: var(--sage-dark); font-size: 8px; font-weight: 700; cursor: pointer; }
+.ocr-panel.needs-review { border-color: #eadcc7; background: #fbf7f0; }
+.ocr-panel.needs-review .ocr-check { background: #f1e5d2; color: #8b623f; }
+@keyframes ocrSpin { to { transform: rotate(360deg); } }
 .entry-menu { display: grid; gap: 9px; }
 .entry-menu-hint { margin: -7px 0 13px; color: var(--muted); font-size: 9px; line-height: 1.55; }
 .entry-option {
@@ -497,6 +527,21 @@ button { color: inherit; }
 .own-spending-label b, .own-spending-label small { display: block; }
 .own-spending-label b { margin-bottom: 3px; font-size: 9px; }
 .own-spending-label small { color: var(--muted); font-size: 7px; line-height: 1.4; }
+.loan-entry-panel { margin: 0 0 15px; padding: 13px; border: 1px solid #d8e4da; border-radius: 17px; background: #f3f8f4; }
+.loan-entry-head { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 13px; }
+.loan-entry-head > i { display: grid; place-items: center; flex: 0 0 auto; width: 30px; height: 30px; border-radius: 10px; background: white; color: var(--sage-dark); font-size: 11px; font-style: normal; font-weight: 800; }
+.loan-entry-head b { display: block; font-size: 11px; }
+.loan-entry-head p { margin: 4px 0 0; color: var(--muted); font-size: 8px; line-height: 1.55; }
+.loan-interest-question { margin-bottom: 12px; }
+.loan-followup-reminder { margin: 1px 0 12px; padding: 11px 12px; border-radius: 13px; background: #f4eadc; color: #6f5b40; }
+.loan-followup-reminder b { display: block; font-size: 10px; }
+.loan-followup-reminder p { margin: 4px 0 0; font-size: 8px; line-height: 1.55; }
+.loan-iou-option { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 11px; border-top: 1px solid #d9e2db; }
+.loan-iou-option > div { min-width: 0; }
+.loan-iou-option b { display: block; font-size: 10px; }
+.loan-iou-option p { margin: 4px 0 0; color: var(--muted); font-size: 7px; line-height: 1.45; }
+.loan-iou-option button { flex: 0 0 auto; border: 0; border-radius: 11px; padding: 9px 10px; background: var(--ink); color: white; font-size: 8px; font-weight: 700; cursor: pointer; }
+.record-loan-reminder { margin-top: 12px; margin-bottom: 0; }
 .relation-legal-note { background: #f4f0e9; border-radius: 14px; padding: 11px 12px; margin-bottom: 15px; }
 .relation-legal-note b { display: block; font-size: 10px; margin-bottom: 4px; }
 .relation-legal-note p { margin: 0; color: #736d68; font-size: 9px; line-height: 1.55; }
@@ -537,8 +582,11 @@ button { color: inherit; }
 .modal-actions { display: flex; gap: 9px; margin-top: 18px; }
 .modal-actions button { flex: 1; border: 0; border-radius: 14px; padding: 12px; cursor: pointer; }
 .secondary-button { background: #eeeae4; }
+.lawyer-shortcut-button { background: var(--sage-soft); color: var(--sage-dark); font-weight: 700; }
 .primary-button { background: var(--ink); color: white; }
 .primary-button:disabled { opacity: .45; cursor: not-allowed; }
+.record-detail-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.record-detail-actions button { min-width: 0; padding-right: 8px; padding-left: 8px; }
 
 .detail-image { width: 100%; max-height: 210px; object-fit: contain; border-radius: 16px; background: #f1eee9; margin-bottom: 15px; }
 .detail-lines { display: grid; gap: 0; border: 1px solid var(--line); border-radius: 17px; padding: 3px 14px; }
@@ -646,6 +694,11 @@ button { color: inherit; }
   .phone-frame { width: 100%; height: 100vh; min-height: 600px; border: 0; border-radius: 0; box-shadow: none; }
   .phone-frame::before { display: none; }
   .app-header { padding-top: max(19px, env(safe-area-inset-top)); }
+}
+
+@media (max-width: 380px) {
+  .form-grid-three { grid-template-columns: 1fr 1fr; }
+  .form-grid-three .form-field:first-child { grid-column: 1 / -1; }
 }
 
 @media (max-height: 720px) and (min-width: 861px) {

@@ -4,6 +4,10 @@ const LANGUAGE_KEY = "youjieyouhuan.prototype.language";
 const state = {
   page: "home",
   filter: "all",
+  recordYear: "all",
+  recordMonth: "all",
+  recordSort: "time",
+  recordSortDirection: "desc",
   perspective: "self",
   relationshipScope: "all",
   statsRange: "total",
@@ -16,9 +20,14 @@ const state = {
   language: localStorage.getItem(LANGUAGE_KEY) === "en" ? "en" : "zh",
   data: loadData(),
   draft: null,
+  ocrManualFields: new Set(),
+  ocrRequestId: 0,
+  ocrProgressRequestId: 0,
   addStep: 1,
   entryMode: "text"
 };
+
+let localOCRWorkerPromise = null;
 
 const pageMeta = {
   zh: {
@@ -50,7 +59,7 @@ const builtInLegalKnowledge = [
     summaryEn: "The private-lending judicial interpretation calls for debt instruments and other evidence. With only a transfer record, the reason, relationship, and context may still be disputed.",
     sourceZh: "最高人民法院民间借贷司法解释第2条、第16条",
     sourceEn: "SPC Provisions on Private Lending, Articles 2 and 16",
-    url: "https://gongbao.court.gov.cn/Details/94b6623974526df7d2430a3c73f050.html"
+    url: "https://wb.flk.npc.gov.cn/sfjs/texthtml/67ca8dc476d94646b234453984659629.html"
   },
   {
     id: "electronic-evidence", kindZh: "电子证据", kindEn: "Digital evidence",
@@ -80,7 +89,7 @@ const builtInLegalKnowledge = [
     summaryEn: "Civil Code Articles 1062 and 1063 distinguish property jointly owned by spouses from separate property, including premarital property and gifts expressly made to one spouse.",
     sourceZh: "《中华人民共和国民法典》第1062条、第1063条",
     sourceEn: "PRC Civil Code, Articles 1062 and 1063",
-    url: "https://wb.flk.npc.gov.cn/flfg/PDF/bd53dd912c1048f2aecbaa229238334b.pdf"
+    url: "https://www.court.gov.cn/zixun/xiangqing/233181.html"
   },
   {
     id: "marital-debt", kindZh: "夫妻债务", kindEn: "Marital debt",
@@ -90,7 +99,7 @@ const builtInLegalKnowledge = [
     summaryEn: "Civil Code Article 1064 distinguishes jointly agreed debts and ordinary family expenses from debts incurred individually beyond daily family needs, subject to evidence about purpose and common intent.",
     sourceZh: "《中华人民共和国民法典》第1064条",
     sourceEn: "PRC Civil Code, Article 1064",
-    url: "https://wb.flk.npc.gov.cn/flfg/PDF/bd53dd912c1048f2aecbaa229238334b.pdf"
+    url: "https://www.court.gov.cn/zixun/xiangqing/233181.html"
   },
   {
     id: "marital-property-agreement", kindZh: "财产约定", kindEn: "Property agreement",
@@ -100,7 +109,7 @@ const builtInLegalKnowledge = [
     summaryEn: "Civil Code Article 1065 allows spouses to make a written agreement that premarital and marital property will be owned separately, jointly, or in a combination of both.",
     sourceZh: "《中华人民共和国民法典》第1065条",
     sourceEn: "PRC Civil Code, Article 1065",
-    url: "https://wb.flk.npc.gov.cn/flfg/PDF/bd53dd912c1048f2aecbaa229238334b.pdf"
+    url: "https://www.court.gov.cn/zixun/xiangqing/233181.html"
   },
   {
     id: "cohabitation-property", kindZh: "同居财产", kindEn: "Cohabitation property",
@@ -120,7 +129,7 @@ const builtInLegalKnowledge = [
     summaryEn: "Articles 1 to 3 of the SPC rules address property given for marriage under local custom and exclude modest commemorative gifts and ordinary relationship expenses from the scope of betrothal gifts.",
     sourceZh: "最高人民法院涉彩礼纠纷司法解释第1条至第3条",
     sourceEn: "SPC Provisions on Betrothal Gift Disputes, Articles 1 to 3",
-    url: "https://gongbao.court.gov.cn/Details/d2fa08a82a91337bf6515842d1522e.html"
+    url: "https://www.court.gov.cn/zixun/xiangqing/423442.html"
   },
   {
     id: "betrothal-gift-return", kindZh: "彩礼返还", kindEn: "Return of betrothal gifts",
@@ -130,7 +139,7 @@ const builtInLegalKnowledge = [
     summaryEn: "Articles 5 and 6 require a contextual assessment that may include marriage registration, duration of cohabitation, children or pregnancy, fault, actual use of the gift, and dowry circumstances.",
     sourceZh: "最高人民法院涉彩礼纠纷司法解释第5条、第6条",
     sourceEn: "SPC Provisions on Betrothal Gift Disputes, Articles 5 and 6",
-    url: "https://gongbao.court.gov.cn/Details/d2fa08a82a91337bf6515842d1522e.html"
+    url: "https://www.court.gov.cn/zixun/xiangqing/423442.html"
   }
 ];
 
@@ -278,6 +287,7 @@ function normalizeData(data) {
     if (record.relationshipId === "demo-relation" && record.counterparty === "她") record.counterparty = "对方";
     if (record.relationshipId === "demo-relation" && record.note === "送给她的手机。") record.note = "送给对方的手机。";
     if (!record.category) record.category = inferCategory(record);
+    if (record.category === "daily") record.category = "other";
     if (typeof record.transferMemo !== "string") record.transferMemo = "";
     if (!record.payer) record.payer = "me";
     if (record.status === "pending" && record.nature === "待确认") {
@@ -290,11 +300,12 @@ function normalizeData(data) {
 
 function inferCategory(record) {
   const text = `${record.title || ""}${record.nature || ""}`;
-  if (/转账|周转|借款|代付|垫付/.test(text)) return "transfer";
+  if (/借款|借贷|借给|出借/.test(text)) return "loan";
+  if (/转账|周转|代付|垫付/.test(text)) return "transfer";
   if (/礼物|赠与|手机/.test(text)) return "gift";
   if (/车票|出行|酒店|住宿/.test(text)) return "travel";
   if (/吃|餐|饭/.test(text)) return "dining";
-  return "daily";
+  return "other";
 }
 
 function activeRelationship() {
@@ -335,15 +346,21 @@ function relationshipTypeLabel(type) {
 
 function categoryLabel(category) {
   const labels = en()
-    ? { dining: "Dining", gift: "Gift", transfer: "Transfer", travel: "Travel & stay", daily: "Everyday", other: "Other" }
-    : { dining: "餐饮", gift: "礼物", transfer: "转账", travel: "出行住宿", daily: "日常", other: "其他" };
+    ? { dining: "Dining", gift: "Gift", transfer: "Transfer", travel: "Travel & stay", loan: "Loan", other: "Other" }
+    : { dining: "餐饮", gift: "礼物", transfer: "转账", travel: "出行住宿", loan: "借贷", other: "其他" };
   return labels[category] || text("其他", "Other");
 }
 
 function categoryIcon(category) {
   return (en()
-    ? { dining: "D", gift: "G", transfer: "T", travel: "R", daily: "E", other: "+" }
-    : { dining: "餐", gift: "礼", transfer: "转", travel: "行", daily: "日", other: "记" })[category] || text("记", "+");
+    ? { dining: "D", gift: "G", transfer: "T", travel: "R", loan: "L", other: "+" }
+    : { dining: "餐", gift: "礼", transfer: "转", travel: "行", loan: "借", other: "记" })[category] || text("记", "+");
+}
+
+function interestDescription(mode, detail = "") {
+  if (mode === "yes") return detail ? text(`有利息 · ${detail}`, `Interest applies · ${detail}`) : text("有利息，具体标准待补充", "Interest applies; terms to be added");
+  if (mode === "no") return text("无利息", "No interest");
+  return text("尚未说清", "Not yet agreed");
 }
 
 function saveData() {
@@ -732,17 +749,51 @@ function renderRecords() {
   const filters = [
     ["all", text("全部", "All")], ["pending", text("达到单笔提醒线", "Reached single-payment line")], ["gift", text("礼物", "Gifts")], ["transfer", text("转账", "Transfers")], ["image", text("有截图", "With screenshot")]
   ];
-  let records = [...activeRecords()].sort((a,b) => b.date.localeCompare(a.date));
+  const allRecords = [...activeRecords()];
+  const years = [...new Set(allRecords.map(record => String(record.date || "").slice(0, 4)).filter(Boolean))].sort((a, b) => b.localeCompare(a));
+  const months = [...new Set(allRecords.map(record => String(record.date || "").slice(5, 7)).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  if (state.recordYear !== "all" && !years.includes(state.recordYear)) state.recordYear = "all";
+  if (state.recordMonth !== "all" && !months.includes(state.recordMonth)) state.recordMonth = "all";
+  const yearOptions = [["all", text("全部年份", "All years")], ...years.map(year => [year, `${year}${text("年", "")}`])];
+  const monthNames = en() ? ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] : [];
+  const monthOptions = [["all", text("全部月份", "All months")], ...months.map(month => [month, en() ? monthNames[Number(month) - 1] : `${Number(month)}月`])];
+  let records = allRecords;
+  if (state.recordYear !== "all") records = records.filter(record => String(record.date || "").startsWith(`${state.recordYear}-`));
+  if (state.recordMonth !== "all") records = records.filter(record => String(record.date || "").slice(5, 7) === state.recordMonth);
   if (state.filter === "pending") records = records.filter(reachesSingleReminder);
   if (["gift", "transfer"].includes(state.filter)) records = records.filter(r => r.category === state.filter);
   if (state.filter === "image") records = records.filter(r => r.image);
+  const direction = state.recordSortDirection === "asc" ? 1 : -1;
+  records.sort((a, b) => {
+    if (state.recordSort === "amount") return (Number(a.amount || 0) - Number(b.amount || 0)) * direction;
+    const aTime = `${a.date || ""}T${a.time || "00:00"}`;
+    const bTime = `${b.date || ""}T${b.time || "00:00"}`;
+    return aTime.localeCompare(bTime) * direction;
+  });
+  const sortArrow = state.recordSortDirection === "desc" ? "↓" : "↑";
+  const sortHint = state.recordSort === "amount"
+    ? (state.recordSortDirection === "desc" ? text("金额从高到低", "Highest amount first") : text("金额从低到高", "Lowest amount first"))
+    : (state.recordSortDirection === "desc" ? text("时间从新到旧", "Newest first") : text("时间从旧到新", "Oldest first"));
   const scope = scopedRelationship();
   const legacyCount = state.data.records.filter(record => record.payer === "other" && (!scope || record.relationshipId === scope.id)).length;
+  const emptyRecords = allRecords.length && !records.length
+    ? `<div class="empty-state compact"><div class="empty-icon">○</div><h3>${text("这个筛选范围还没有记录", "No records match these filters")}</h3><p>${text("可以换一个年份、月份或类别看看。", "Try another year, month, or category.")}</p></div>`
+    : renderRecordCards(records);
   return `
     <div class="page-intro"><h3>${text("每一笔，都是当时的你", "Each record preserves a moment")}</h3><p>${text("这里留下的是事实，不是对一段关系的判决。", "These are facts you saved, not a verdict on the relationship.")}</p></div>
     ${legacyCount ? `<p class="legacy-note">${text(`旧版保留的 ${legacyCount} 笔“对方付款”记录未计入当前统计，但仍存在于本地备份中。`, `${legacyCount} legacy entries paid by the other person are excluded from current statistics but remain in the local backup.`)}</p>` : ""}
+    <section class="record-toolbox">
+      <div class="record-period-pickers">
+        <label><span>${text("年份", "Year")}</span><select data-record-year>${yearOptions.map(([value, label]) => `<option value="${value}" ${state.recordYear === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>
+        <label><span>${text("月份", "Month")}</span><select data-record-month>${monthOptions.map(([value, label]) => `<option value="${value}" ${state.recordMonth === value ? "selected" : ""}>${label}</option>`).join("")}</select></label>
+      </div>
+      <div class="record-sort-row"><span>${text("排序", "Sort")}</span><div>
+        <button class="record-sort-button ${state.recordSort === "time" ? "active" : ""}" data-action="set-record-sort" data-sort="time">${text("时间", "Time")}${state.recordSort === "time" ? sortArrow : ""}</button>
+        <button class="record-sort-button ${state.recordSort === "amount" ? "active" : ""}" data-action="set-record-sort" data-sort="amount">${text("金额", "Amount")}${state.recordSort === "amount" ? sortArrow : ""}</button>
+      </div><small>${sortHint}</small></div>
+    </section>
     <div class="filter-row">${filters.map(([key, label]) => `<button class="filter-chip ${state.filter === key ? "active" : ""}" data-action="set-filter" data-filter="${key}">${label}</button>`).join("")}</div>
-    <div class="record-list">${renderRecordCards(records)}</div>
+    <div class="record-list">${emptyRecords}</div>
   `;
 }
 
@@ -821,7 +872,7 @@ function renderClarify() {
   const selectedAmount = selectedRecords.reduce((sum, record) => sum + Number(record.amount), 0);
   const directReady = selectedRecords.length > 0;
   const months = [...new Set(pendingRecords().map(record => record.date.slice(0, 7)))].sort((a, b) => b.localeCompare(a));
-  const categories = [["all", text("全部类目", "All categories")], ["transfer", text("转账", "Transfers")], ["gift", text("礼物", "Gifts")], ["dining", text("餐饮", "Dining")], ["travel", text("出行", "Travel")], ["daily", text("日常", "Everyday")], ["other", text("其他", "Other")]];
+  const categories = [["all", text("全部类目", "All categories")], ["loan", text("借贷", "Loans")], ["transfer", text("转账", "Transfers")], ["gift", text("礼物", "Gifts")], ["dining", text("餐饮", "Dining")], ["travel", text("出行", "Travel")], ["other", text("其他", "Other")]];
   return `
     <div class="page-intro"><h3>${text("先选范围，再决定怎么说", "Choose the scope, then choose how to speak")}</h3><p>${text("这里集中显示当前关系中达到单笔提醒线的支出。可以只选一笔，也可以全选一段时间。", "This shows spending in the current relationship that reached your single-payment reminder line. Choose one entry or a whole period.")}</p></div>
     ${en() ? `<article class="jurisdiction-note"><b>English interface · PRC law first</b><p>This version is intended for cross-border marriages and relationships involving China. Changing the interface language does not change the governing law. Other cross-border rules can be added later after legal review.</p></article>` : ""}
@@ -897,7 +948,7 @@ function renderMe() {
 
 function newDraft() {
   const relation = activeRelationship();
-  return { id: uid(), relationshipId: relation.id, date: localDateString(), title: "", category: "dining", transferMemo: "", counterparty: relation.name, amount: "", payer: "me", nature: "支出记录", note: "", dueDate: "", status: "recorded", image: "", source: "text" };
+  return { id: uid(), relationshipId: relation.id, date: localDateString(), time: "", title: "", category: "dining", transferMemo: "", counterparty: relation.name, amount: "", payer: "me", nature: "支出记录", note: "", dueDate: "", interestMode: "unclear", interestDetail: "", status: "recorded", image: "", source: "text", ocrStatus: "idle", ocrProgress: 0, ocrResult: null };
 }
 
 function relationshipLegalHint(type) {
@@ -913,6 +964,8 @@ function relationshipLegalHint(type) {
 
 function openAdd(mode = "text") {
   if (!state.data.relationships.some(relation => relation.id !== "empty-relation")) return showNewRelationship();
+  state.ocrRequestId += 1;
+  state.ocrManualFields = new Set();
   state.entryMode = mode;
   state.draft = newDraft();
   state.draft.source = mode;
@@ -933,11 +986,22 @@ function openEntryMenu() {
   </div></div>`;
 }
 
+function renderLoanFields(d) {
+  return `<section class="loan-entry-panel">
+    <div class="loan-entry-head"><i>借</i><div><b>${text("把借贷约定顺手记清", "Record the loan terms clearly")}</b><p>${text("这只是按你的选择记录，不代表系统已经认定借贷关系成立。", "This records your selection only; it is not a legal determination that a loan exists.")}</p></div></div>
+    <div class="choice-question compact-question loan-interest-question"><label>${text("是否有利息？", "Is interest payable?")}</label><div class="choice-row">${choiceButtons("interestMode", [["yes", text("有", "Yes")], ["no", text("无", "No")], ["unclear", text("没说清", "Unclear")]], d.interestMode || "unclear")}</div></div>
+    ${d.interestMode === "yes" ? `<div class="form-field"><label>${text("利息约定（可补充）", "Interest terms (optional)")}</label><input data-draft="interestDetail" value="${escapeHTML(d.interestDetail || "")}" placeholder="${text("例如：年利率5%，或每月利息500元", "e.g. 5% per year or ¥500 per month")}"></div>` : ""}
+    <div class="form-field"><label>${text("多久归还？（可先不填）", "When should it be repaid? (optional)")}</label><input data-draft="dueDate" type="date" min="${d.date || localDateString()}" value="${escapeHTML(d.dueDate || "")}"></div>
+    <article class="loan-followup-reminder"><b>${text("后续提醒", "Follow-up reminder")}</b><p>${text("记得定期讨要，保留沟通和催款记录，并关注诉讼时效。", "Request repayment periodically, keep the communications and demands, and pay attention to limitation periods.")}</p></article>
+    <div class="loan-iou-option"><div><b>${text("是否生成借条文案？", "Generate a simple IOU?")}</b><p>${text("根据当前金额、日期、利息和归还时间生成一份简版文字。", "Create a short draft from the current amount, date, interest, and repayment terms.")}</p></div><button type="button" data-action="preview-iou-draft">${text("生成借条文案", "Generate IOU")}</button></div>
+  </section>`;
+}
+
 function renderAddModal() {
   const d = state.draft;
   const root = document.getElementById("modalRoot");
   {
-    const categories = ["dining", "gift", "transfer", "travel", "daily", "other"].map(value => [value, categoryLabel(value)]);
+    const categories = ["dining", "gift", "transfer", "travel", "loan", "other"].map(value => [value, categoryLabel(value)]);
     const sourceText = ({
       text: text("文字记录 · 先把事实留下来", "Text entry · Save the facts first"),
       image: text("截图记录 · 图片只保存在当前设备", "Screenshot entry · Image stays on this device"),
@@ -956,18 +1020,21 @@ function renderAddModal() {
     const simpleBody = `
       <div class="source-banner">${sourceText}</div>
       <div class="record-relation-picker"><label>${text("这笔支出属于哪段关系？", "Which relationship does this spending belong to?")}</label><div>${relationshipChoices}</div></div>
-      <div class="form-grid" style="margin-top:14px">
+      <div class="form-grid form-grid-three" style="margin-top:14px">
         <div class="form-field"><label>${text("金额", "Amount")}</label><input data-draft="amount" type="number" min="0" step="0.01" value="${escapeHTML(d.amount)}" placeholder="0.00"></div>
         <div class="form-field"><label>${text("日期", "Date")}</label><input data-draft="date" type="date" max="${localDateString()}" value="${d.date}"></div>
+        <div class="form-field"><label>${text("时间（可选）", "Time (optional)")}</label><input data-draft="time" type="time" value="${escapeHTML(d.time || "")}"></div>
       </div>
       <div class="form-field"><label>${titleLabel}</label><input data-draft="title" value="${escapeHTML(d.title)}" placeholder="${titlePlaceholder}"></div>
       <div class="own-spending-label"><i>我</i><span><b>${text("这是一笔我的支出", "This is my spending")}</b><small>${text("不记录对方流水；是否得到回应，留给后续提醒", "The other person's transactions are not recorded; reciprocity is handled through reflection prompts")}</small></span></div>
       ${state.entryMode === "gift" ? "" : `<div class="choice-question compact-question"><label>${text("选个类目就行", "Choose a category")}</label><div class="category-grid">${categories.map(([value,label]) => `<button class="category-button ${d.category === value ? "active" : ""}" data-action="set-choice" data-field="category" data-value="${value}" aria-pressed="${d.category === value}"><i>${categoryIcon(value)}</i>${label}</button>`).join("")}</div></div>`}
+      ${d.category === "loan" ? renderLoanFields(d) : ""}
       ${needsImage ? `<label class="upload-zone compact-upload" for="receiptFile">
         ${d.image ? `<img src="${d.image}" alt="${text("图片预览", "Image preview")}">` : `<div><b>${state.entryMode === "receipt" ? text("拍摄或选择一张小票", "Take or choose a receipt") : text("选择付款或聊天截图", "Choose a payment or chat screenshot")}</b><span>${text("只处理你主动选择的图片，不读取整个相册", "Only the image you select is processed; the whole album is never read")}<br>${text("原型压缩后仅存于当前浏览器", "The compressed image stays in this browser")}</span></div>`}
       </label>
       <input id="receiptFile" type="file" accept="image/*" ${state.entryMode === "receipt" ? 'capture="environment"' : ""} hidden>` : ""}
-      <div class="form-field" data-transfer-memo-field ${d.category === "transfer" ? "" : "hidden"}><label>${text("转账附言（可不填）", "Transfer memo (optional)")}</label><input data-draft="transferMemo" value="${escapeHTML(d.transferMemo)}" placeholder="${text("例如：临时周转、房租、生日礼物", "e.g. short-term help, rent, birthday gift")}"></div>
+      ${needsImage && d.image ? renderOCRPanel(d) : ""}
+      <div class="form-field" data-transfer-memo-field ${["transfer", "loan"].includes(d.category) ? "" : "hidden"}><label>${text("转账附言（可不填）", "Transfer memo (optional)")}</label><input data-draft="transferMemo" value="${escapeHTML(d.transferMemo)}" placeholder="${text("例如：借款、临时周转、房租", "e.g. loan, short-term help, rent")}"></div>
       <div class="form-field"><label>${text("给自己留一句话（可不填）", "One sentence for yourself (optional)")}</label><textarea rows="3" data-draft="note" placeholder="${text("发生了什么，按你自己的话记下来就好", "What happened, in your own words")}">${escapeHTML(d.note)}</textarea></div>
       <p class="recording-nudge">${text("不必现在给这笔钱下结论。先把真实发生的事留下来。", "You do not need to decide what this money means now. Save what happened first.")}</p>
     `;
@@ -1034,14 +1101,24 @@ function saveDraft() {
     return toast(state.entryMode === "receipt" ? text("请先拍摄或选择一张小票", "Take or choose a receipt first") : text("请先选择一张截图", "Choose a screenshot first"));
   }
   state.draft.amount = Number(state.draft.amount);
+  state.draft.occurredAt = state.draft.time ? `${state.draft.date}T${state.draft.time}` : `${state.draft.date}T00:00`;
   const noteTitle = state.draft.transferMemo || state.draft.note;
   state.draft.title = state.draft.title || (noteTitle ? noteTitle.trim().slice(0, 36) : text(`${categoryLabel(state.draft.category)}记录`, `${categoryLabel(state.draft.category)} record`));
   const singleLimit = Number(state.data.settings.singleLimit || 0);
   const isLarge = singleLimit > 0 && state.draft.amount >= singleLimit;
   state.draft.attention = isLarge;
   state.draft.status = "recorded";
-  state.draft.nature = "支出记录";
-  state.data.records.push({ ...state.draft });
+  state.draft.nature = state.draft.category === "loan" ? "借款" : "支出记录";
+  const savedRecord = { ...state.draft };
+  savedRecord.recognition = state.draft.ocrResult ? {
+    method: "local-ocr",
+    confidence: state.draft.ocrResult.confidence,
+    confirmedByUser: true
+  } : null;
+  delete savedRecord.ocrStatus;
+  delete savedRecord.ocrProgress;
+  delete savedRecord.ocrResult;
+  state.data.records.push(savedRecord);
   state.data.activeRelationshipId = relation.id;
   saveData();
   closeModal();
@@ -1060,20 +1137,59 @@ function showRecord(id) {
       ${r.image ? `<img class="detail-image" src="${r.image}" alt="${text("记录截图", "Record screenshot")}">` : ""}
       <div class="detail-lines">
         <div class="detail-line"><span>${text("金额", "Amount")}</span><b>¥${money(r.amount)}</b></div>
-        <div class="detail-line"><span>${text("日期", "Date")}</span><b>${formatDate(r.date)}</b></div>
+        <div class="detail-line"><span>${text("日期时间", "Date & time")}</span><b>${formatDate(r.date)}${r.time ? ` · ${escapeHTML(r.time)}` : ""}</b></div>
         <div class="detail-line"><span>${text("记录视角", "Record perspective")}</span><b>${text("我的支出", "My spending")}</b></div>
         <div class="detail-line"><span>${text("类目", "Category")}</span><b>${categoryLabel(r.category)}</b></div>
         <div class="detail-line"><span>${text("记录状态", "Status")}</span><b>${canClarify ? text("达到单笔提醒线", "Reached single-payment line") : text("已记录", "Recorded")}</b></div>
         ${r.transferMemo ? `<div class="detail-line"><span>${text("转账附言", "Transfer memo")}</span><b>${escapeHTML(r.transferMemo)}</b></div>` : ""}
+        ${r.category === "loan" ? `<div class="detail-line"><span>${text("利息约定", "Interest")}</span><b>${escapeHTML(interestDescription(r.interestMode, r.interestDetail))}</b></div>` : ""}
         ${r.dueDate ? `<div class="detail-line"><span>${text("期望还款日", "Expected repayment date")}</span><b>${formatDate(r.dueDate)}</b></div>` : ""}
       </div>
+      ${r.category === "loan" ? `<article class="loan-followup-reminder record-loan-reminder"><b>${text("后续提醒", "Follow-up reminder")}</b><p>${text("记得定期讨要，保留沟通和催款记录，并关注诉讼时效。", "Request repayment periodically, keep the communications and demands, and pay attention to limitation periods.")}</p></article>` : ""}
       ${canClarify ? `<article class="record-evidence-note"><b>${text("需要说清或咨询时，先核对这笔钱的上下文", "Check the context before clarification or consultation")}</b><p>${text(`付款截图：${r.image ? "已有" : "未添加"} · 转账附言：${r.transferMemo ? "已有" : "未添加"} · 自己留下的话：${r.note ? "已有" : "未添加"}`, `Payment screenshot: ${r.image ? "saved" : "not added"} · Transfer memo: ${r.transferMemo ? "saved" : "not added"} · Your note: ${r.note ? "saved" : "not added"}`)}</p><small>${text("再确认是否保留了前后聊天、通话录音、短信、邮件、借条或后续还款记录。", "Also check for surrounding chats, call recordings, texts, email, an IOU, or later repayments.")}</small></article>` : ""}
       ${r.note ? `<article class="insight-card sage" style="margin-top:12px"><h4>${text("当时记下的话", "Your note at the time")}</h4><p>${escapeHTML(r.note)}</p></article>` : ""}
-      <div class="modal-actions">
+      <div class="modal-actions ${canClarify ? "record-detail-actions" : ""}">
         ${canClarify ? `<button class="secondary-button" data-action="generate-doc" data-id="${r.id}">${text("生成沟通草稿", "Create a conversation draft")}</button>` : ""}
+        ${canClarify ? `<button class="lawyer-shortcut-button" data-action="record-consultation" data-id="${r.id}">${text("请律师看看", "Ask a lawyer")}</button>` : ""}
         <button class="primary-button" data-action="close-modal">${text("知道了", "Done")}</button>
       </div>
     </div></div>`;
+}
+
+function openRecordConsultation(id) {
+  const record = state.data.records.find(item => item.id === id);
+  if (!record || !reachesSingleReminder(record)) return;
+  state.data.activeRelationshipId = record.relationshipId;
+  state.clarifySelected = [record.id];
+  state.clarifyMode = "consult";
+  state.clarifyCategory = "all";
+  state.clarifyMonth = "all";
+  state.page = "clarify";
+  saveData();
+  closeModal();
+  render();
+  prepareConsultation();
+}
+
+function previewIouDraft() {
+  syncDraftInputs();
+  const d = state.draft;
+  if (!d || d.category !== "loan") return;
+  if (!Number(d.amount) || Number(d.amount) <= 0) return toast(text("先填写借款金额", "Enter the loan amount first"));
+  const relation = relationshipById(d.relationshipId);
+  const interest = interestDescription(d.interestMode, d.interestDetail);
+  const repayment = d.dueDate || text("____年__月__日", "____ / ____ / ______");
+  const purpose = d.title || d.transferMemo || text("________", "________");
+  const iouText = en()
+    ? `Simple IOU\n\nBorrower: ${displayRelationName(relation) || "________"}\nLender: ________\n\nThe borrower confirms receiving a loan of ¥${money(d.amount)} from the lender on ${d.date}.\n\nPurpose: ${purpose}\nInterest: ${interest}\nRepayment date: ${repayment}\n\nBorrower signature: ________\nID / contact details: ________\nDate signed: ________\n\nKeep proof of payment and communications. Request repayment periodically and pay attention to limitation periods.`
+    : `借条（简版）\n\n借款人：${displayRelationName(relation) || "________"}\n出借人：________\n\n借款人确认于 ${d.date} 收到出借人交付的借款人民币 ${money(d.amount)} 元。\n\n借款用途：${purpose}\n利息约定：${interest}\n归还日期：${repayment}\n\n借款人签字：________\n身份证号／联系方式：________\n签署日期：________\n\n请保留款项交付和双方沟通记录。记得定期讨要，并关注诉讼时效。`;
+  document.getElementById("modalRoot").innerHTML = `<div class="modal-backdrop"><div class="modal-card">
+    <div class="modal-head"><div><small class="modal-kicker">${text("借贷记录 · 可复制文字", "Loan record · Copyable text")}</small><h3>${text("简版借条文案", "Simple IOU draft")}</h3></div><button class="close-button" data-action="return-to-record-draft">×</button></div>
+    <div class="document-preview" id="documentText">${escapeHTML(iouText)}</div>
+    <article class="loan-followup-reminder record-loan-reminder"><b>${text("别只保存一张借条", "Do not rely on the IOU alone")}</b><p>${text("请核对双方身份、借款金额、款项交付、利息和归还期限，并保留转账及沟通原始记录。记得定期讨要，关注诉讼时效。", "Check identities, amount, delivery, interest, and repayment terms, and keep the original payment and communication records. Request repayment periodically and pay attention to limitation periods.")}</p></article>
+    <p class="disclaimer">${text("这是根据单方填写生成的简版文字模板，不代表借贷关系已经得到对方确认，也不替代针对具体情况的法律意见。", "This is a simple text template based on one person's entry. It is not the other party's confirmation or legal advice for a specific matter.")}</p>
+    <div class="modal-actions"><button class="secondary-button" data-action="return-to-record-draft">${text("返回记录", "Back")}</button><button class="primary-button" data-action="copy-doc">${text("复制借条文案", "Copy IOU")}</button></div>
+  </div></div>`;
 }
 
 function generateDocument(id) {
@@ -1281,9 +1397,204 @@ function evidencePack() {
   toast(text("事项摘要已生成", "Matter summary created"));
 }
 
+function renderOCRPanel(d) {
+  const result = d.ocrResult || {};
+  const recognized = [
+    result.amount ? text(`金额 ¥${result.amount}`, `Amount ¥${result.amount}`) : "",
+    result.date ? text(`日期 ${result.date}`, `Date ${result.date}`) : "",
+    result.time ? text(`时间 ${result.time}`, `Time ${result.time}`) : "",
+    result.title ? text(`对象 ${result.title}`, `Payee ${result.title}`) : ""
+  ].filter(Boolean);
+  const progress = Math.max(2, Math.round(Number(d.ocrProgress || 0) * 100));
+  if (d.ocrStatus === "recognizing") return `<section class="ocr-panel recognizing">
+    <div class="ocr-panel-head"><span class="ocr-spinner"></span><div><b>${text("正在本地识别", "Recognizing on this device")}</b><small>${text("识别结果只用于预填，稍后仍由你确认", "Results only prefill the form for your confirmation")}</small></div><strong data-ocr-progress>${progress}%</strong></div>
+    <div class="ocr-progress-track"><i data-ocr-progress-bar style="width:${progress}%"></i></div>
+    <p>${text("图片不会上传；首次识别需要加载随原型保存的中文识别数据。", "The image is not uploaded. The bundled Chinese recognition data is loaded on first use.")}</p>
+  </section>`;
+  if (d.ocrStatus === "done") return `<section class="ocr-panel done">
+    <div class="ocr-panel-head"><span class="ocr-check">✓</span><div><b>${text(`已识别并预填 ${recognized.length} 项`, `${recognized.length} field${recognized.length === 1 ? "" : "s"} recognized and prefilled`)}</b><small>${text("请对照图片核对后再保存", "Check every field against the image before saving")}</small></div></div>
+    <div class="ocr-field-chips">${recognized.map(item => `<span>${escapeHTML(item)}</span>`).join("")}</div>
+    <p>${text("本地 OCR 可能把订单号、优惠金额或截图时间读错；你的修改始终优先。", "Local OCR may confuse order numbers, discounts, or screenshot times. Your edits always take priority.")}</p>
+    <button type="button" data-action="retry-ocr">${text("重新识别", "Recognize again")}</button>
+  </section>`;
+  const message = d.ocrStatus === "error"
+    ? (d.ocrError || text("本地识别没有完成，请手动填写。", "Local recognition did not finish. Please enter the fields manually."))
+    : text("没有稳定读出金额或时间，请手动填写。", "No reliable amount or time was found. Please enter them manually.");
+  return `<section class="ocr-panel needs-review">
+    <div class="ocr-panel-head"><span class="ocr-check">!</span><div><b>${text("需要手动确认", "Manual confirmation needed")}</b><small>${escapeHTML(message)}</small></div></div>
+    <button type="button" data-action="retry-ocr">${text("再识别一次", "Try recognition again")}</button>
+  </section>`;
+}
+
+function updateOCRProgress(progress) {
+  if (!state.draft || state.draft.ocrStatus !== "recognizing" || state.ocrProgressRequestId !== state.ocrRequestId) return;
+  state.draft.ocrProgress = Math.max(state.draft.ocrProgress || 0, Number(progress || 0));
+  const percent = Math.max(2, Math.round(state.draft.ocrProgress * 100));
+  const label = document.querySelector("[data-ocr-progress]");
+  const bar = document.querySelector("[data-ocr-progress-bar]");
+  if (label) label.textContent = `${percent}%`;
+  if (bar) bar.style.width = `${percent}%`;
+}
+
+async function getLocalOCRWorker() {
+  if (!window.Tesseract) throw new Error("OCR engine is unavailable");
+  if (!localOCRWorkerPromise) {
+    const base = new URL("./", window.location.href);
+    localOCRWorkerPromise = window.Tesseract.createWorker("chi_sim", 1, {
+      workerPath: new URL("ocr/worker.min.js", base).href,
+      corePath: new URL("ocr/tesseract-core-lstm.wasm.js", base).href,
+      langPath: new URL("ocr/lang/", base).href,
+      logger: message => updateOCRProgress(message.progress)
+    }).catch(error => {
+      localOCRWorkerPromise = null;
+      throw error;
+    });
+  }
+  return localOCRWorkerPromise;
+}
+
+function normalizeOCRText(value) {
+  return String(value || "")
+    .replace(/[０-９]/g, char => String(char.charCodeAt(0) - 65296))
+    .replace(/[：]/g, ":")
+    .replace(/[，]/g, ",")
+    .replace(/[。]/g, ".")
+    .replace(/[／]/g, "/")
+    .replace(/[－—]/g, "-")
+    .replace(/\u00a0/g, " ");
+}
+
+function validOCRDate(year, month, day) {
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return "";
+  const value = localDateString(date);
+  return value <= localDateString() ? value : "";
+}
+
+function findOCRDate(lines) {
+  const candidates = [];
+  lines.forEach((line, index) => {
+    const dateContext = /交易时间|支付时间|付款时间|消费时间|下单时间|创建时间|日期/.test(line) ? 50 : 0;
+    let match = line.match(/(20\d{2})\s*[年\-\/.]\s*(\d{1,2})\s*[月\-\/.]\s*(\d{1,2})\s*日?/);
+    if (match) {
+      const value = validOCRDate(Number(match[1]), Number(match[2]), Number(match[3]));
+      if (value) candidates.push({ value, score: 80 + dateContext - index * .01, line });
+    } else {
+      match = line.match(/(?:^|\s)(\d{1,2})\s*[月\-\/]\s*(\d{1,2})\s*日?(?:\s|$)/);
+      if (match) {
+        const value = validOCRDate(new Date().getFullYear(), Number(match[1]), Number(match[2]));
+        if (value) candidates.push({ value, score: 35 + dateContext - index * .01, line });
+      }
+    }
+  });
+  return candidates.sort((a, b) => b.score - a.score)[0] || null;
+}
+
+function findOCRTime(lines, preferredLine = "") {
+  const candidates = [];
+  lines.forEach((line, index) => {
+    const matches = [...line.matchAll(/(?:^|\D)([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?(?:\D|$)/g)];
+    matches.forEach(match => candidates.push({
+      value: `${String(match[1]).padStart(2, "0")}:${match[2]}`,
+      score: (/交易时间|支付时间|付款时间|消费时间|下单时间|创建时间/.test(line) ? 55 : 20) + (line === preferredLine ? 35 : 0) - index * .01
+    }));
+  });
+  return candidates.sort((a, b) => b.score - a.score)[0]?.value || "";
+}
+
+function findOCRAmount(lines) {
+  const candidates = [];
+  const strongLabel = /实付|实际支付|支付金额|付款金额|转账金额|交易金额|消费金额|订单金额|应付|合计|总计|金额/;
+  const weakLabel = /支付|付款|转账|人民币|RMB|CNY|¥|￥/i;
+  const excluded = /优惠|折扣|立减|原价|余额|找零|积分|单价|数量|订单号|流水号|交易单号|商户单号|卡号/;
+  lines.forEach((line, lineIndex) => {
+    const numberPattern = /(?:¥|￥|RMB|CNY)?\s*(-?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?|-?\d+(?:\.\d{1,2})?)/gi;
+    for (const match of line.matchAll(numberPattern)) {
+      const token = match[1].replace(/,/g, "");
+      const value = Number(token);
+      if (!Number.isFinite(value) || value <= 0 || value >= 100000000 || token.replace(/\D/g, "").length > 9) continue;
+      let score = 0;
+      if (strongLabel.test(line)) score += 90;
+      else if (weakLabel.test(line)) score += 45;
+      if (/[¥￥]|RMB|CNY/i.test(match[0])) score += 45;
+      if (/\.\d{1,2}$/.test(token)) score += 14;
+      if (excluded.test(line)) score -= 105;
+      if (/20\d{2}[年\-\/.]/.test(line) && !strongLabel.test(line)) score -= 70;
+      if (/\d{1,2}:\d{2}/.test(line) && !strongLabel.test(line)) score -= 35;
+      if (value >= 1900 && value <= 2099 && !strongLabel.test(line)) score -= 65;
+      candidates.push({ value, score: score - lineIndex * .01 });
+    }
+  });
+  const selected = candidates.sort((a, b) => b.score - a.score)[0];
+  return selected && selected.score >= 35 ? String(Math.round(selected.value * 100) / 100) : "";
+}
+
+function findOCRTitle(lines) {
+  const label = /^(?:商户名称|商户|收款方|收款人|商家|交易对象|付款给)\s*[:：]?\s*(.+)$/;
+  for (const line of lines) {
+    const match = line.match(label);
+    if (!match) continue;
+    const value = match[1].replace(/[¥￥]\s*\d[\d,.]*/g, "").trim();
+    if (value.length >= 2 && value.length <= 36) return value;
+  }
+  return "";
+}
+
+function extractOCRFields(rawText, confidence) {
+  const normalized = normalizeOCRText(rawText);
+  const lines = normalized.split(/\r?\n/).map(line => line.replace(/\s+/g, " ").trim()).filter(Boolean);
+  const dateCandidate = findOCRDate(lines);
+  return {
+    amount: findOCRAmount(lines),
+    date: dateCandidate?.value || "",
+    time: findOCRTime(lines, dateCandidate?.line || ""),
+    title: findOCRTitle(lines),
+    confidence: Math.max(0, Math.min(100, Math.round(Number(confidence || 0))))
+  };
+}
+
+async function recognizeDraftImage() {
+  const draft = state.draft;
+  if (!draft?.image) return;
+  const requestId = ++state.ocrRequestId;
+  state.ocrProgressRequestId = requestId;
+  draft.ocrStatus = "recognizing";
+  draft.ocrProgress = 0;
+  draft.ocrError = "";
+  draft.ocrResult = null;
+  renderAddModal();
+  try {
+    if (window.location.protocol === "file:") throw new Error("LOCAL_SERVER_REQUIRED");
+    const worker = await getLocalOCRWorker();
+    const result = await worker.recognize(draft.image);
+    if (requestId !== state.ocrRequestId || state.draft?.id !== draft.id) return;
+    const fields = extractOCRFields(result.data.text, result.data.confidence);
+    const found = [fields.amount, fields.date, fields.time, fields.title].filter(Boolean).length;
+    draft.ocrResult = found ? fields : null;
+    draft.ocrStatus = found ? "done" : "empty";
+    draft.ocrProgress = 1;
+    if (fields.amount && !state.ocrManualFields.has("amount")) draft.amount = fields.amount;
+    if (fields.date && !state.ocrManualFields.has("date")) draft.date = fields.date;
+    if (fields.time && !state.ocrManualFields.has("time")) draft.time = fields.time;
+    if (fields.title && !state.ocrManualFields.has("title")) draft.title = fields.title;
+    renderAddModal();
+    toast(found
+      ? text("已本地识别并预填，请对照图片确认", "Recognized locally and prefilled. Please check against the image")
+      : text("没有稳定读出金额或时间，请手动填写", "No reliable amount or time was found. Please enter them manually"));
+  } catch (error) {
+    if (requestId !== state.ocrRequestId || state.draft?.id !== draft.id) return;
+    draft.ocrStatus = "error";
+    draft.ocrError = error?.message === "LOCAL_SERVER_REQUIRED"
+      ? text("请通过“启动体验.cmd”打开原型后再使用本地识别。", "Open the prototype with the launcher before using local recognition.")
+      : text("本地识别没有完成，请手动填写或再试一次。", "Local recognition did not finish. Enter the fields manually or try again.");
+    renderAddModal();
+  }
+}
+
 async function compressImage(file) {
   if (!file || !file.type.startsWith("image/")) return;
   if (file.size > 12 * 1024 * 1024) return toast(text("图片过大，请选择 12MB 以内的截图", "Image is too large. Choose one under 12 MB"));
+  syncDraftInputs();
   const raw = await fileToDataURL(file);
   const img = await loadImage(raw);
   const max = 1200;
@@ -1294,7 +1605,8 @@ async function compressImage(file) {
   canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
   state.draft.image = canvas.toDataURL("image/jpeg", .76);
   renderAddModal();
-  toast(state.entryMode === "receipt" ? text("小票已加入，请核对金额和类目", "Receipt added. Check the amount and category") : text("截图已加入，请核对金额和类目", "Screenshot added. Check the amount and category"));
+  toast(state.entryMode === "receipt" ? text("小票已加入，正在本地识别", "Receipt added. Recognizing locally") : text("截图已加入，正在本地识别", "Screenshot added. Recognizing locally"));
+  recognizeDraftImage();
 }
 
 async function attachConsultationImages(files, recordId) {
@@ -1329,7 +1641,10 @@ function loadImage(src) {
   return new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = src; });
 }
 
-function closeModal() { document.getElementById("modalRoot").innerHTML = ""; }
+function closeModal() {
+  state.ocrRequestId += 1;
+  document.getElementById("modalRoot").innerHTML = "";
+}
 
 let toastTimer;
 function toast(message) {
@@ -1435,7 +1750,12 @@ function showPrivacyCenter() {
 function showLaw(id) {
   const item = legalKnowledge.find(entry => entry.id === id);
   if (!item) return;
-  simpleModal(en() ? item.kindEn : item.kindZh, `<article class="law-detail"><h4>${en() ? item.titleEn : item.titleZh}</h4><p>${en() ? item.summaryEn : item.summaryZh}</p><small>${en() ? item.sourceEn : item.sourceZh}</small><a href="${item.url}" target="_blank" rel="noreferrer">${text("查看官方原文 ↗", "Open official source ↗")}</a></article><p class="disclaimer">${text("这是普法摘要，不是针对你的个案意见。", "This is general legal education, not advice on your case.")}</p>`);
+  const officialSite = item.url.includes("npc.gov.cn")
+    ? text("全国人大 · 国家法律法规数据库", "National Laws Database")
+    : item.url.includes("court.gov.cn")
+      ? text("最高人民法院", "Supreme People's Court")
+      : text("官方来源", "Official source");
+  simpleModal(en() ? item.kindEn : item.kindZh, `<article class="law-detail"><h4>${en() ? item.titleEn : item.titleZh}</h4><p>${en() ? item.summaryEn : item.summaryZh}</p><small>${en() ? item.sourceEn : item.sourceZh}</small><a href="${item.url}" target="_blank" rel="noreferrer">${text(`前往${officialSite}查看原文 ↗`, `Open on ${officialSite} ↗`)}</a></article><p class="disclaimer">${text("这是普法摘要，不是针对你的个案意见。", "This is general legal education, not advice on your case.")}</p>`);
 }
 
 function showRelationships() {
@@ -1604,21 +1924,31 @@ document.addEventListener("click", async event => {
   if (action === "next-step" && validateDraftStep()) { state.addStep += 1; renderAddModal(); }
   if (action === "prev-step") { syncDraftInputs(); state.addStep -= 1; renderAddModal(); }
   if (action === "set-choice") {
+    const modalScrollTop = document.querySelector("#modalRoot .modal-card")?.scrollTop || 0;
+    syncDraftInputs();
     state.draft[target.dataset.field] = target.dataset.value;
-    if (target.dataset.field === "category") {
-      document.querySelectorAll("#modalRoot .category-button").forEach(button => {
-        const active = button.dataset.value === target.dataset.value;
-        button.classList.toggle("active", active);
-        button.setAttribute("aria-pressed", String(active));
-      });
-      const transferMemoField = document.querySelector("#modalRoot [data-transfer-memo-field]");
-      if (transferMemoField) transferMemoField.hidden = target.dataset.value !== "transfer";
-    } else {
-      renderAddModal();
-    }
+    state.ocrManualFields.add(target.dataset.field);
+    renderAddModal();
+    const rerenderedModal = document.querySelector("#modalRoot .modal-card");
+    if (rerenderedModal) rerenderedModal.scrollTop = modalScrollTop;
+  }
+  if (action === "preview-iou-draft") previewIouDraft();
+  if (action === "return-to-record-draft") renderAddModal();
+  if (action === "retry-ocr") {
+    syncDraftInputs();
+    recognizeDraftImage();
   }
   if (action === "save-record") saveDraft();
   if (action === "set-filter") { state.filter = target.dataset.filter; render(); }
+  if (action === "set-record-sort") {
+    const sort = target.dataset.sort;
+    if (state.recordSort === sort) state.recordSortDirection = state.recordSortDirection === "desc" ? "asc" : "desc";
+    else {
+      state.recordSort = sort;
+      state.recordSortDirection = "desc";
+    }
+    render({ preserveScroll: true });
+  }
   if (action === "set-stats-range") {
     const view = document.getElementById("appView");
     const previousScrollTop = view.scrollTop;
@@ -1654,6 +1984,7 @@ document.addEventListener("click", async event => {
   }
   if (action === "record-detail") showRecord(target.dataset.id);
   if (action === "generate-doc") generateDocument(target.dataset.id);
+  if (action === "record-consultation") openRecordConsultation(target.dataset.id);
   if (action === "copy-doc") {
     const copiedText = document.getElementById("documentText")?.innerText || "";
     try { await navigator.clipboard.writeText(copiedText); toast(text("内容已复制", "Copied")); } catch (_) { toast(text("浏览器未允许复制，请手动选择文本", "Copy was blocked. Select the text manually")); }
@@ -1706,11 +2037,20 @@ document.addEventListener("click", async event => {
 document.addEventListener("change", async event => {
   if (event.target.id === "receiptFile") compressImage(event.target.files[0]);
   if (event.target.matches("[data-consultation-image]")) await attachConsultationImages(event.target.files, event.target.dataset.consultationImage);
+  if (event.target.matches("[data-record-year]")) { state.recordYear = event.target.value; render({ preserveScroll: true }); }
+  if (event.target.matches("[data-record-month]")) { state.recordMonth = event.target.value; render({ preserveScroll: true }); }
   if (event.target.matches("[data-clarify-month]")) { state.clarifyMonth = event.target.value; render({ preserveScroll: true }); }
   if (event.target.matches("[data-setting]")) {
     state.data.settings[event.target.dataset.setting] = Number(event.target.value || 0);
     saveData(); render({ preserveScroll: true }); toast(text("设置已保存", "Setting saved"));
   }
+});
+
+document.addEventListener("input", event => {
+  if (!event.target.matches("[data-draft]") || !state.draft) return;
+  const field = event.target.dataset.draft;
+  state.draft[field] = event.target.value;
+  state.ocrManualFields.add(field);
 });
 
 document.addEventListener("input", event => {

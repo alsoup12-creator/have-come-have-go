@@ -1,2 +1,2 @@
 @echo off
-start "" "%~dp0index.html"
+start "" powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0本地体验服务.ps1"
