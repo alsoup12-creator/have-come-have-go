@@ -1,0 +1,566 @@
+/* Confirmed 2026-09-17 UI v1. Presentation only; app.js retains all behavior. */
+:root {
+  --ink: #172A27;
+  --muted: #78827D;
+  --paper: #FAF9F6;
+  --canvas: #F0EDE7;
+  --sage: #436E5D;
+  --sage-dark: #183C34;
+  --sage-soft: #EDF2EC;
+  --peach-soft: #F7EDE2;
+  --line: #E5E8E2;
+  --shadow: 0 24px 70px rgba(42, 37, 28, .16);
+  --ui-page-title: 24px;
+  --ui-section-title: 18px;
+  --ui-body: 14px;
+  --ui-secondary: 12px;
+  --ui-card-radius: 16px;
+  --ui-card-gap: 12px;
+}
+
+body {
+  background: var(--canvas);
+}
+
+.ambient {
+  background: #E9E1D5;
+  opacity: .3;
+}
+
+.prototype-note h1 {
+  color: var(--sage-dark);
+}
+
+.brand-mark {
+  background: var(--sage-dark);
+}
+
+.phone-frame {
+  width: 390px;
+  height: min(844px, calc(100vh - 64px));
+  min-height: 0;
+  border: 0;
+  border-radius: 28px;
+  outline: 8px solid #26302D;
+  background: var(--paper);
+}
+
+.phone-frame::before {
+  content: none;
+}
+
+/* First requested refinement: all scene windows use 39:12 with existing assets.
+   Images are fitted proportionally; source files remain unchanged.
+   Existing active navigation state supplies the page; no new JS is needed. */
+.ui-scene {
+  flex: 0 0 auto;
+  width: 100%;
+  aspect-ratio: 39 / 12;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background-image: url("assets/ui-v1/backgrounds/today-header.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.phone-frame:has(.nav-item[data-page="records"].active) .ui-scene {
+  background-image: url("assets/ui-v1/backgrounds/records-header.png");
+}
+
+.phone-frame:has(.nav-item[data-page="clarify"].active) .ui-scene {
+  background-image: url("assets/ui-v1/backgrounds/clarify-header.png");
+}
+
+.phone-frame:has(.nav-item[data-page="me"].active) .ui-scene {
+  background-image: url("assets/ui-v1/backgrounds/mine-header.png");
+}
+
+.app-header {
+  gap: 12px;
+  padding: 16px;
+  background: transparent;
+  color: white;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, .7);
+}
+
+.app-header > div:first-child {
+  min-width: 0;
+  width: 100%;
+}
+
+.app-header small {
+  color: inherit;
+  font-size: var(--ui-secondary);
+  line-height: 1.5;
+  margin-bottom: 5px;
+  padding-right: 86px;
+}
+
+.app-header h2 {
+  font-size: var(--ui-page-title);
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.header-actions {
+  flex: 0 0 auto;
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  text-shadow: none;
+}
+
+.language-button,
+.avatar-button {
+  background: white;
+  border: 1px solid var(--line);
+  color: var(--sage-dark);
+}
+
+.avatar-button {
+  background: var(--sage-soft);
+}
+
+.app-view {
+  padding: 16px 16px 20px;
+  background: var(--paper);
+}
+
+.bottom-nav {
+  flex: 0 0 76px;
+  height: 76px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 8px 0;
+  background: white;
+  backdrop-filter: none;
+  border-top-color: var(--line);
+}
+
+.nav-item {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  gap: 5px;
+  font-size: var(--ui-secondary);
+  line-height: 1.3;
+  color: var(--muted);
+}
+
+.nav-item.active {
+  color: var(--sage-dark);
+}
+
+.nav-icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.nav-item[data-page="home"] .nav-icon {
+  background-image: url("assets/ui-v1/icons/today-line.png");
+}
+.nav-item[data-page="home"].active .nav-icon {
+  background-image: url("assets/ui-v1/icons/today-filled.png");
+}
+.nav-item[data-page="records"] .nav-icon {
+  background-image: url("assets/ui-v1/icons/records-line.png");
+}
+.nav-item[data-page="records"].active .nav-icon {
+  background-image: url("assets/ui-v1/icons/records-filled.png");
+}
+.nav-item[data-page="clarify"] .nav-icon {
+  background-image: url("assets/ui-v1/icons/clarify-line.png");
+}
+.nav-item[data-page="clarify"].active .nav-icon {
+  background-image: url("assets/ui-v1/icons/clarify-filled.png");
+}
+.nav-item[data-page="me"] .nav-icon {
+  background-image: url("assets/ui-v1/icons/mine-line.png");
+}
+.nav-item[data-page="me"].active .nav-icon {
+  background-image: url("assets/ui-v1/icons/mine-filled.png");
+}
+
+.add-fab {
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.ui-add-icon {
+  display: block;
+  width: 60px;
+  height: 60px;
+  pointer-events: none;
+}
+
+.hero-card {
+  padding: 20px;
+  border-radius: var(--ui-card-radius);
+  background: var(--sage-dark);
+}
+
+.hero-card::after {
+  content: none;
+}
+
+.hero-label {
+  font-size: var(--ui-body);
+}
+
+.hero-value {
+  font-family: inherit;
+  font-size: 36px;
+  line-height: 1.2;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+  margin: 10px 0;
+}
+
+.hero-sub,
+.hero-foot {
+  font-size: var(--ui-secondary);
+  line-height: 1.6;
+}
+
+.hero-progress > span {
+  background: #E8C291;
+}
+
+.relationship-strip {
+  margin-bottom: var(--ui-card-gap);
+}
+
+.relationship-current,
+.relationship-new {
+  border-radius: var(--ui-card-radius);
+}
+
+.relationship-current small {
+  font-size: 10px;
+}
+
+.relationship-current b,
+.relationship-new {
+  font-size: var(--ui-secondary);
+}
+
+.relationship-current > span:nth-child(2) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.record-principle {
+  margin: 12px 0 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--ui-card-radius);
+  background: white;
+}
+
+.record-principle b,
+.insight-card h4 {
+  font-size: var(--ui-body);
+  line-height: 1.5;
+}
+
+.record-principle p,
+.insight-card p {
+  font-size: var(--ui-secondary);
+  line-height: 1.65;
+}
+
+.insight-card {
+  padding: 16px;
+  border-radius: var(--ui-card-radius);
+  margin-bottom: var(--ui-card-gap);
+}
+
+.section-head {
+  gap: 12px;
+  margin: 20px 0 12px;
+}
+
+.section-head h3 {
+  font-size: var(--ui-section-title);
+  line-height: 1.4;
+}
+
+.section-head button {
+  flex: 0 0 auto;
+  font-size: var(--ui-secondary);
+}
+
+.record-list {
+  gap: var(--ui-card-gap);
+}
+
+.record-card {
+  padding: 12px;
+  gap: 12px;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  border-radius: var(--ui-card-radius);
+  min-height: 72px;
+}
+
+.record-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  font-size: 20px;
+}
+
+.record-main {
+  min-width: 0;
+}
+
+.record-main b,
+.record-amount b {
+  font-size: var(--ui-body);
+  line-height: 1.4;
+}
+
+.record-main b {
+  overflow-wrap: anywhere;
+}
+
+.record-main span {
+  font-size: var(--ui-secondary);
+  max-width: 100%;
+}
+
+.record-amount span {
+  font-size: 10px;
+}
+
+.record-amount b {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.page-intro {
+  padding: 8px 0;
+}
+
+.page-intro h3 {
+  font-size: var(--ui-page-title);
+}
+
+.page-intro p {
+  font-size: var(--ui-body);
+  line-height: 1.6;
+}
+
+.record-toolbox,
+.clarify-filter-panel,
+.clarify-month-group,
+.clarify-path-card,
+.relationship-chart-card,
+.relationship-scope-card,
+.settings-card,
+.privacy-summary-card,
+.metric-card,
+.law-card,
+.evidence-overview {
+  border-radius: var(--ui-card-radius);
+}
+
+.record-toolbox {
+  background: #F5F4F0;
+}
+
+.record-period-pickers label > span,
+.record-sort-row > span,
+.clarify-time-filter label {
+  font-size: var(--ui-secondary);
+}
+
+.record-period-pickers select,
+.clarify-time-filter select {
+  font-size: var(--ui-secondary);
+  background: white;
+}
+
+.filter-chip,
+.record-sort-button,
+.clarify-mode-switch button,
+.perspective-switch button {
+  font-size: var(--ui-secondary);
+}
+
+.filter-chip.active,
+.small-button.primary,
+.primary-button,
+.clarify-path-card button {
+  background: var(--sage-dark);
+}
+
+.clarify-selection-summary,
+.clarify-total {
+  border-radius: var(--ui-card-radius);
+  background: #F7EDE2;
+  color: #704C36;
+}
+
+.clarify-selection-summary small {
+  color: #896F5D;
+  font-size: 10px;
+}
+
+.clarify-selection-summary b,
+.clarify-month-head b {
+  font-size: var(--ui-body);
+}
+
+.clarify-selection-summary strong,
+.clarify-total strong,
+.relationship-chart-total strong,
+.relationship-chart-summary strong {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.clarify-record-row {
+  padding: 12px 6px;
+  gap: 8px;
+}
+
+.clarify-record-row > div b,
+.clarify-record-row > strong {
+  font-size: var(--ui-secondary);
+}
+
+.clarify-record-row > div span,
+.clarify-detail {
+  font-size: 10px;
+}
+
+.clarify-path-card h4 {
+  font-size: var(--ui-body);
+}
+
+.clarify-path-card p,
+.clarify-path-card button {
+  font-size: var(--ui-secondary);
+}
+
+.clarify-path-card small {
+  font-size: 10px;
+}
+
+.settings-card {
+  padding: 4px 16px;
+}
+
+.settings-row {
+  min-height: 76px;
+  padding: 12px 0;
+}
+
+.settings-row > div:first-child {
+  min-width: 0;
+}
+
+.settings-row b {
+  font-size: var(--ui-body);
+  line-height: 1.5;
+}
+
+.settings-row span {
+  font-size: var(--ui-secondary);
+  line-height: 1.6;
+}
+
+.settings-row input {
+  flex: 0 0 84px;
+  font-size: var(--ui-body);
+  background: #F5F4F0;
+}
+
+.relationship-overview-head b {
+  font-size: var(--ui-section-title);
+}
+
+.relationship-overview-head span,
+.relationship-overview-head button {
+  font-size: 10px;
+}
+
+.relationship-scope-card > b,
+.relationship-chart-total span {
+  font-size: var(--ui-secondary);
+}
+
+.relationship-scope-card > small,
+.relationship-chart-summary span,
+.relationship-chart-summary small {
+  font-size: 10px;
+}
+
+.chart-track i {
+  background: var(--sage);
+  box-shadow: none;
+}
+
+.chart-value,
+.chart-column small {
+  font-size: 9px;
+}
+
+.relationship-bars .chart-column b {
+  font-size: 11px;
+}
+
+.law-card b,
+.privacy-summary-card b,
+.evidence-head h4 {
+  font-size: var(--ui-body);
+}
+
+.law-card small,
+.privacy-summary-card small,
+.evidence-overview > p {
+  font-size: var(--ui-secondary);
+  line-height: 1.6;
+}
+
+@media (max-width: 860px) {
+  body {
+    background: var(--paper);
+  }
+
+  .phone-frame {
+    width: 100%;
+    max-width: 390px;
+    height: 100vh;
+    height: 100dvh;
+    margin-inline: auto;
+    padding-top: env(safe-area-inset-top, 0px);
+    border: 0;
+    border-radius: 0;
+    outline: 0;
+    box-shadow: none;
+  }
+
+  .app-header {
+    padding-top: 16px;
+  }
+
+  .bottom-nav {
+    flex-basis: calc(76px + env(safe-area-inset-bottom, 0px));
+    height: calc(76px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+}

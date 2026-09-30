@@ -987,10 +987,10 @@ function openEntryMenu() {
 }
 
 function renderLoanFields(d) {
-  return `<section class="loan-entry-panel">
+  return `<section class="loan-entry-panel" ${d.category === "loan" ? "" : "hidden"}>
     <div class="loan-entry-head"><i>借</i><div><b>${text("把借贷约定顺手记清", "Record the loan terms clearly")}</b><p>${text("这只是按你的选择记录，不代表系统已经认定借贷关系成立。", "This records your selection only; it is not a legal determination that a loan exists.")}</p></div></div>
     <div class="choice-question compact-question loan-interest-question"><label>${text("是否有利息？", "Is interest payable?")}</label><div class="choice-row">${choiceButtons("interestMode", [["yes", text("有", "Yes")], ["no", text("无", "No")], ["unclear", text("没说清", "Unclear")]], d.interestMode || "unclear")}</div></div>
-    ${d.interestMode === "yes" ? `<div class="form-field"><label>${text("利息约定（可补充）", "Interest terms (optional)")}</label><input data-draft="interestDetail" value="${escapeHTML(d.interestDetail || "")}" placeholder="${text("例如：年利率5%，或每月利息500元", "e.g. 5% per year or ¥500 per month")}"></div>` : ""}
+    <div class="form-field" data-interest-detail-field ${d.interestMode === "yes" ? "" : "hidden"}><label>${text("利息约定（可补充）", "Interest terms (optional)")}</label><input data-draft="interestDetail" value="${escapeHTML(d.interestDetail || "")}" placeholder="${text("例如：年利率5%，或每月利息500元", "e.g. 5% per year or ¥500 per month")}"></div>
     <div class="form-field"><label>${text("多久归还？（可先不填）", "When should it be repaid? (optional)")}</label><input data-draft="dueDate" type="date" min="${d.date || localDateString()}" value="${escapeHTML(d.dueDate || "")}"></div>
     <article class="loan-followup-reminder"><b>${text("后续提醒", "Follow-up reminder")}</b><p>${text("记得定期讨要，保留沟通和催款记录，并关注诉讼时效。", "Request repayment periodically, keep the communications and demands, and pay attention to limitation periods.")}</p></article>
     <div class="loan-iou-option"><div><b>${text("是否生成借条文案？", "Generate a simple IOU?")}</b><p>${text("根据当前金额、日期、利息和归还时间生成一份简版文字。", "Create a short draft from the current amount, date, interest, and repayment terms.")}</p></div><button type="button" data-action="preview-iou-draft">${text("生成借条文案", "Generate IOU")}</button></div>
@@ -1028,7 +1028,7 @@ function renderAddModal() {
       <div class="form-field"><label>${titleLabel}</label><input data-draft="title" value="${escapeHTML(d.title)}" placeholder="${titlePlaceholder}"></div>
       <div class="own-spending-label"><i>我</i><span><b>${text("这是一笔我的支出", "This is my spending")}</b><small>${text("不记录对方流水；是否得到回应，留给后续提醒", "The other person's transactions are not recorded; reciprocity is handled through reflection prompts")}</small></span></div>
       ${state.entryMode === "gift" ? "" : `<div class="choice-question compact-question"><label>${text("选个类目就行", "Choose a category")}</label><div class="category-grid">${categories.map(([value,label]) => `<button class="category-button ${d.category === value ? "active" : ""}" data-action="set-choice" data-field="category" data-value="${value}" aria-pressed="${d.category === value}"><i>${categoryIcon(value)}</i>${label}</button>`).join("")}</div></div>`}
-      ${d.category === "loan" ? renderLoanFields(d) : ""}
+      ${renderLoanFields(d)}
       ${needsImage ? `<label class="upload-zone compact-upload" for="receiptFile">
         ${d.image ? `<img src="${d.image}" alt="${text("图片预览", "Image preview")}">` : `<div><b>${state.entryMode === "receipt" ? text("拍摄或选择一张小票", "Take or choose a receipt") : text("选择付款或聊天截图", "Choose a payment or chat screenshot")}</b><span>${text("只处理你主动选择的图片，不读取整个相册", "Only the image you select is processed; the whole album is never read")}<br>${text("原型压缩后仅存于当前浏览器", "The compressed image stays in this browser")}</span></div>`}
       </label>
@@ -1044,7 +1044,7 @@ function renderAddModal() {
 }
 
 function choiceButtons(field, choices, active) {
-  return choices.map(([value, label]) => `<button class="choice-button ${active === value ? "active" : ""}" data-action="set-choice" data-field="${field}" data-value="${value}">${label}</button>`).join("");
+  return choices.map(([value, label]) => `<button class="choice-button ${active === value ? "active" : ""}" data-action="set-choice" data-field="${field}" data-value="${value}" aria-pressed="${active === value}">${label}</button>`).join("");
 }
 
 function applyNature(d) {
@@ -1924,13 +1924,21 @@ document.addEventListener("click", async event => {
   if (action === "next-step" && validateDraftStep()) { state.addStep += 1; renderAddModal(); }
   if (action === "prev-step") { syncDraftInputs(); state.addStep -= 1; renderAddModal(); }
   if (action === "set-choice") {
-    const modalScrollTop = document.querySelector("#modalRoot .modal-card")?.scrollTop || 0;
+    const modal = document.querySelector("#modalRoot .modal-card");
+    const modalScrollTop = modal.scrollTop;
     syncDraftInputs();
     state.draft[target.dataset.field] = target.dataset.value;
     state.ocrManualFields.add(target.dataset.field);
-    renderAddModal();
-    const rerenderedModal = document.querySelector("#modalRoot .modal-card");
-    if (rerenderedModal) rerenderedModal.scrollTop = modalScrollTop;
+    modal.querySelectorAll('[data-action="set-choice"]').forEach(button => {
+      const selected = state.draft[button.dataset.field] === button.dataset.value;
+      button.classList.toggle("active", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+    modal.querySelector(".loan-entry-panel").hidden = state.draft.category !== "loan";
+    modal.querySelector("[data-interest-detail-field]").hidden = state.draft.interestMode !== "yes";
+    modal.querySelector('[data-draft="dueDate"]').min = state.draft.date || localDateString();
+    modal.querySelector("[data-transfer-memo-field]").hidden = !["transfer", "loan"].includes(state.draft.category);
+    modal.scrollTop = modalScrollTop;
   }
   if (action === "preview-iou-draft") previewIouDraft();
   if (action === "return-to-record-draft") renderAddModal();
