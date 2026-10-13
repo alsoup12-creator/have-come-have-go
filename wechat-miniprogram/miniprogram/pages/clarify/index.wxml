@@ -1,0 +1,80 @@
+<view class="page">
+  <view class="hero clarify compact-hero">
+    <image class="hero-bg" src="/assets/backgrounds/clarify-header.png" mode="aspectFill" />
+    <text class="eyebrow">先看见，再决定</text>
+    <text class="hero-title">该说清的钱</text>
+    <text class="hero-copy">先选择事实范围，再决定是和对方核对，还是整理成咨询材料。</text>
+  </view>
+
+  <view class="card info-card" wx:if="{{hasRelationship}}">
+    <view><text class="muted">当前关系</text><text class="focus">{{relationshipName}}</text></view>
+    <view class="right"><text class="muted">单笔提醒线</text><text class="focus">¥{{singleLimit}}</text></view>
+  </view>
+
+  <view class="card empty" wx:if="{{!hasRelationship}}">
+    <text class="empty-title">请先建立一段关系</text>
+    <text class="muted">说清功能只整理当前关系中的记录。</text>
+  </view>
+
+  <block wx:if="{{hasRelationship}}">
+    <view class="card scope-guide">
+      <text class="scope-title">先选择要查看的记录</text>
+      <text class="scope-copy">{{scopeDescription}}</text>
+      <view class="scope-switch">
+        <view class="scope-option {{scope === item.key ? 'active' : ''}}" wx:for="{{scopeOptions}}" wx:key="key" data-scope="{{item.key}}" bindtap="setScope">
+          <text>{{item.label}}</text><text>{{item.count}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="filter-panel">
+      <picker mode="selector" range="{{monthOptions}}" range-key="label" value="{{monthIndex}}" bindchange="onMonthChange">
+        <view class="picker-filter">付款时间：{{monthOptions[monthIndex].label}}⌄</view>
+      </picker>
+      <scroll-view class="filter-row" scroll-x enhanced show-scrollbar="false">
+        <view class="filter-inner">
+          <view class="filter-chip {{category === item.key ? 'active' : ''}}" wx:for="{{categoryFilters}}" wx:key="key" data-key="{{item.key}}" bindtap="setCategory">{{item.label}}</view>
+        </view>
+      </scroll-view>
+      <view class="selection-tools"><text>当前范围 {{records.length}} 笔</text><view><text bindtap="selectAll">全选当前范围</text><text bindtap="clearSelection">清空</text></view></view>
+    </view>
+
+    <view class="selection-summary"><view><text class="muted">当前关系已选择</text><text class="selection-count">{{selectedCount}} 笔</text><text class="selection-hidden" wx:if="{{selectedHiddenCount}}">其中 {{selectedHiddenCount}} 笔不在当前筛选中</text></view><text class="selection-amount">¥ {{selectedAmount}}</text></view>
+
+    <view class="card empty" wx:if="{{!records.length}}"><text class="empty-title">{{emptyTitle}}</text><text class="muted">{{emptyDescription}}</text></view>
+
+    <view class="record card {{item.checked ? 'checked' : ''}}" wx:for="{{records}}" wx:key="id" data-id="{{item.id}}" bindtap="toggleRecord">
+      <view class="check">{{item.checked ? '✓' : ''}}</view>
+      <view class="record-body">
+        <view class="record-top"><text class="record-title">{{item.title}}</text><text class="record-amount">¥{{item.amountText}}</text></view>
+        <view class="record-meta"><text class="muted">{{item.date}} · {{item.categoryLabel}}</text><text class="status-tag {{item.alerted ? 'alerted' : ''}}">{{item.alerted ? '达到提醒线' : '未触发提醒'}}</text></view>
+        <text class="memo" wx:if="{{item.transferMemo}}">附言：{{item.transferMemo}}</text>
+        <text class="material-note">截图／照片 {{item.materialCount}} 张</text>
+      </view>
+    </view>
+
+    <view class="section-title"><text>你想怎么处理？</text></view>
+    <view class="mode-switch"><view class="{{mode === 'direct' ? 'active' : ''}}" data-mode="direct" bindtap="setMode">和对方说清</view><view class="{{mode === 'consult' ? 'active' : ''}}" data-mode="consult" bindtap="setMode">整理咨询材料</view></view>
+    <view class="path-card card">
+      <text class="path-badge">{{mode === 'direct' ? '直' : '询'}}</text>
+      <view class="path-body">
+        <text class="card-title">{{mode === 'direct' ? '生成可编辑的沟通内容' : '把每笔记录和对应材料放在一起'}}</text>
+        <text class="muted" wx:if="{{mode === 'direct'}}">只包含你选中的付款事实和沟通文字，不把截图、私人备注或咨询材料发给对方。</text>
+        <text class="muted" wx:else>可为每笔记录继续添加截图或照片，并填写给咨询对象的补充说明；全部继续保存在本机。</text>
+        <button class="primary-button path-button" bindtap="openComposer">{{mode === 'direct' ? '编辑沟通内容' : '编辑材料与截图'}}</button>
+      </view>
+    </view>
+
+    <view class="evidence-card card">
+      <view class="evidence-head"><view><text class="muted">咨询前先整理事实材料</text><text class="card-title">不需要再做复杂问卷</text></view><text class="checklist-link" bindtap="showChecklist">材料清单</text></view>
+      <text class="muted">先看付款截图、转账附言和前后对话，再确认是否还有其他原始记录。</text>
+      <view class="evidence-grid"><view><text>{{evidence.screenshot}}/{{evidence.total}}</text><text>付款截图</text></view><view><text>{{evidence.memo}}/{{evidence.total}}</text><text>转账附言</text></view><view><text>{{evidence.note}}/{{evidence.total}}</text><text>自己备注</text></view></view>
+    </view>
+
+    <view class="section-title law-title"><text>法律小课 · 中国法</text><text class="muted">默认内容</text></view>
+    <scroll-view class="law-scroll" scroll-x enhanced show-scrollbar="false">
+      <view class="law-list"><view class="law-card" wx:for="{{legalItems}}" wx:key="id" data-id="{{item.id}}" bindtap="openLegal"><text>{{item.kind}}</text><text class="law-card-title">{{item.title}}</text><text class="law-source">{{item.source}}</text></view></view>
+    </scroll-view>
+    <text class="law-disclaimer">只做普法提示，不根据你的单方记录自动作出法律结论。具体问题仍需结合完整材料判断。</text>
+  </block>
+</view>

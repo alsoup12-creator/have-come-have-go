@@ -1,0 +1,74 @@
+<view class="page privacy-page">
+  <view class="hero compact-hero">
+    <text class="eyebrow">你的记录，由你控制</text>
+    <text class="hero-title">隐私与使用说明</text>
+    <text class="hero-copy">第一版不设置账号，不连接业务服务器，也不会因金额达到提醒线而自动发送任何内容。</text>
+  </view>
+
+  <view class="card policy-section">
+    <text class="card-title">运营主体与联系方式</text>
+    <text class="muted" selectable="true">知往思来由上海钦合律师事务所运营。产品使用、隐私问题及意见反馈，请联系：18918040702。</text>
+    <text class="muted">本说明更新日期：2026年9月25日。适用于本小程序当前本地记录版本。</text>
+  </view>
+
+  <view class="status card">
+    <view><text class="status-value">{{relationshipCount}}</text><text>段本地关系</text></view>
+    <view><text class="status-value">{{recordCount}}</text><text>笔本地记录</text></view>
+    <view><text class="status-value">{{screenshotCount}}</text><text>张本机图片</text></view>
+  </view>
+
+  <view class="section-title"><text>现在如何保存</text></view>
+  <view class="card rule"><text class="number">1</text><view><text class="card-title">默认只留在当前设备</text><text class="muted">关系称呼、金额、类别、附言和备注保存在微信为本小程序提供的本地存储中。</text></view></view>
+  <view class="card rule"><text class="number">2</text><view><text class="card-title">只处理你主动选择的截图</text><text class="muted">可从相册选择或拍摄付款、聊天、小票材料，文件保存到本小程序的本机目录；截图／小票记录可调用微信 VisionKit 在设备端识别文字候选，不读取微信账单、聊天历史或整个相册。</text></view></view>
+  <view class="card rule"><text class="number">3</text><view><text class="card-title">提醒不会触发分享</text><text class="muted">达到提醒线只改变本机页面上的提示，不会联系对方、律师或其他机构。</text></view></view>
+  <view class="card rule"><text class="number">4</text><view><text class="card-title">沟通和咨询内容都由你主动生成</text><text class="muted">沟通稿、补充说明和逐笔材料编排默认留在本机。只有点击复制后，文字才进入剪贴板；由你决定是否发送及发送给谁。</text></view></view>
+
+  <view class="warning card">
+    <text class="card-title">请不要把本工具作为唯一备份</text>
+    <text class="muted">清理微信数据、删除小程序数据或更换设备可能导致本地记录丢失。重要材料应另行妥善保存原件。</text>
+  </view>
+
+  <view class="section-title"><text>隐私政策</text></view>
+  <view class="card policy-section">
+    <text class="card-title">处理哪些信息，为什么处理</text>
+    <text class="muted">为实现个人记录、统计、提醒和材料整理，小程序在当前设备处理你填写的关系称呼、类型、日期、事项、金额、类别、借贷约定、附言、备注、提醒设置、沟通稿及咨询补充说明，以及你主动选择的截图或照片和识别结果。</text>
+    <text class="muted">请优先使用昵称，并只记录所需信息。截图可能包含金融账户、身份或第三人隐私，建议遮盖无关内容，并确保有合法依据处理他人信息。误发截图或文字可能使接收方知悉其中的私人信息。</text>
+  </view>
+  <view class="card policy-section">
+    <text class="card-title">权限和你的选择</text>
+    <text class="muted">只有主动添加图片时才调用微信选图或拍摄能力；拒绝相关授权仍可手动填写文字记录。截图识别用于预填候选内容，识别失败也可手填。复制功能只在你点击时将所选文字写入剪贴板，不主动读取已有剪贴板内容。</text>
+    <text class="muted">可在微信或手机系统提供的设置中管理相关权限。撤回权限影响后续相应功能，不会自动删除已经保存在本机的记录；你可以另行删除这些记录。</text>
+  </view>
+  <view class="card policy-section">
+    <text class="card-title">保存期限、删除与安全</text>
+    <text class="muted">为供你持续回看，已保存的文字与图片保留在当前设备的小程序存储中，直至你删除对应内容、清除全部数据，或由微信、系统清理。当前不设自动到期删除，也没有运营方服务器备份或跨设备同步。</text>
+    <text class="muted">请在不再需要时及时删除。你可以在记录详情编辑或删除记录，在关系管理编辑或删除关系，在“我的”中清除全部本地数据。删除关系会一并删除其记录与图片；已复制到其他应用的内容需在相应应用另行处理。</text>
+    <text class="muted">小程序依赖微信提供的本地存储机制，未提供额外的应用密码或独立加密保险箱。请妥善保护设备及微信账号，重要材料另存原件。</text>
+  </view>
+  <view class="card policy-section">
+    <text class="card-title">共享、第三方及境外传输</text>
+    <text class="muted">当前版本未接入业务服务器、第三方广告或统计服务，不通过本小程序将你的记录上传给运营方、律师或其他接收方，也不安排将记录传输至境外。调用微信的本地存储、选图、OCR及剪贴板能力时，微信平台自身的信息处理规则以其公布的政策为准。</text>
+    <text class="muted">复制后的文字是否发送、发送给谁，由你决定。你主动联系运营方另行提供的信息，需要根据该次反馈或服务的具体用途另行说明，不会因此自动读取你的本机记录。</text>
+  </view>
+  <view class="card policy-section">
+    <text class="card-title">查阅、复制、更正和反馈</text>
+    <text class="muted">你可随时在本机查阅、更正、删除记录，通过“我的—复制数据文本”留存文字。该文本暂不支持导入恢复，也不包含图片文件。当前无注册账号，不涉及账号注销。</text>
+    <text class="muted" selectable="true">如需协助行使个人信息相关权利，或对本说明有疑问，请联系上海钦合律师事务所：18918040702。由于记录保存在你的设备，运营方无法直接代你读取、找回或远程删除记录，可提供操作协助。</text>
+  </view>
+  <view class="card policy-section">
+    <text class="card-title">未成年人及规则变化</text>
+    <text class="muted">未成年人请在监护人指导下使用，避免填写或分享不必要的身份、账户及关系信息。涉及不满十四周岁未成年人的个人信息，请先取得其监护人同意；监护人如发现不适当记录，可协助删除并联系我们。</text>
+    <text class="muted">未来若增加账号、云同步、在线咨询或分享服务，将在启用前更新说明，告知新增的用途和处理方式，并在需要时另行征求同意。当前本地记录功能不代表已同意未来新增处理。</text>
+  </view>
+
+  <view class="section-title"><text>使用规则与服务边界</text></view>
+  <view class="card policy-section">
+    <text class="card-title">记录事实，自主决定</text>
+    <text class="muted">本工具提供个人付款记录、自设提醒、沟通文字和咨询材料整理。记录类别由你标记，历史付款统计未抵扣还款或退款，不代表尚欠金额。理想回应不是对方实际回复；提醒不评价关系，不自动催收。</text>
+    <text class="muted">请合法、如实记录，不利用本工具伪造事实、侵害他人隐私或传播违法内容。OCR候选、沟通稿及借条参考文本应由你结合实际情况核对后使用。</text>
+    <text class="muted">普法内容为一般信息，不是针对具体案件的法律意见。使用本工具、达到提醒线或生成咨询材料，不当然建立律师委托关系；正式法律服务需另行沟通和办理委托手续。</text>
+    <text class="muted">当前版本没有支付、电子签、云端证据保全或自动提交咨询材料功能，不对证据效力、争议结果作出保证。相关说明不排除或限制用户依法享有的权利及运营方依法应承担的责任。</text>
+  </view>
+
+  <view class="boundary">知往思来用于个人事实记录和一般性提醒，不是电子证据保险箱，也不当然建立律师委托关系。具体法律问题应结合完整材料，由执业律师正式受理后判断。</view>
+</view>

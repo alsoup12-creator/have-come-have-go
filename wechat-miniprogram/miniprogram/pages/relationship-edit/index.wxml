@@ -1,0 +1,37 @@
+<view class="page form-page">
+  <view class="notice card">
+    <text class="card-title">称呼由你决定</text>
+    <text class="muted">可以只写你自己看得懂的称呼，不必填写真实姓名、手机号或身份证号码。</text>
+  </view>
+
+  <form bindsubmit="submit">
+    <view class="field">
+      <text class="field-label">关系称呼</text>
+      <input class="input" name="name" value="{{name}}" data-field="name" bindinput="onFieldInput" maxlength="20" adjust-position="true" cursor-spacing="32" placeholder="例如：对方、某位朋友" placeholder-class="placeholder" />
+    </view>
+
+    <view class="field">
+      <text class="field-label">关系类型</text>
+      <picker mode="selector" range="{{types}}" range-key="label" value="{{typeIndex}}" bindchange="onTypeChange">
+        <view class="picker-value">{{types[typeIndex].label}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="field-label">开始日期（选填）</text>
+      <picker mode="date" value="{{startDate}}" end="{{today}}" bindchange="onDateChange">
+        <view class="picker-value">{{startDate || '暂不填写'}}</view>
+      </picker>
+      <text class="clear-date" wx:if="{{startDate}}" bindtap="clearDate">清除日期</text>
+    </view>
+
+    <view class="field">
+      <text class="field-label">备注（选填）</text>
+      <textarea class="textarea" name="note" value="{{note}}" data-field="note" bindinput="onFieldInput" maxlength="200" adjust-position="true" cursor-spacing="48" placeholder="只写必要信息" placeholder-class="placeholder" />
+    </view>
+
+    <button class="primary-button submit-button" form-type="submit" disabled="{{submitting}}" loading="{{submitting}}">保存到本机</button>
+  </form>
+
+  <button class="danger-button delete-button" wx:if="{{id}}" bindtap="deleteRelationship">删除关系及其记录</button>
+</view>

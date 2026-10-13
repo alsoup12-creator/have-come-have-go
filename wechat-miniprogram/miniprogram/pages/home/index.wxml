@@ -1,0 +1,86 @@
+<view class="page">
+  <view class="hero today">
+    <image class="hero-bg" src="/assets/backgrounds/today-header.png" mode="aspectFill" />
+    <text class="eyebrow">{{fullDate}}</text>
+    <text class="hero-title">今天，也照顾好自己</text>
+  </view>
+
+  <block wx:if="{{hasRelationship}}">
+    <view class="relationship-strip">
+      <picker class="relationship-current" mode="selector" range="{{relationshipNames}}" value="{{relationshipIndex}}" bindchange="onRelationshipChange">
+        <view class="relationship-current-inner">
+          <text class="relationship-avatar">{{relationship.typeInitial}}</text>
+          <view><text class="muted">当前关系</text><text class="relationship-name">{{relationship.name}} · {{relationship.typeLabel}}</text></view>
+          <text class="chevron">⌄</text>
+        </view>
+      </picker>
+      <button class="relationship-new" bindtap="addRelationship">＋ 新建关系</button>
+    </view>
+
+    <view class="perspective-switch">
+      <view class="{{perspective === 'self' ? 'active' : ''}}" data-value="self" bindtap="setPerspective">我的记录</view>
+      <view class="{{perspective === 'ideal' ? 'active' : ''}}" data-value="ideal" bindtap="setPerspective">理想回应</view>
+    </view>
+
+    <view class="amount-card">
+      <text class="amount-label">这段关系中，本月由你支付</text>
+      <view class="ideal-response" wx:if="{{perspective === 'ideal'}}"><text>一种理想回应，并非对方实际回复</text><view>“{{idealResponse}}”</view></view>
+      <view class="amount-line"><text class="currency">¥</text><text class="amount">{{monthAmount}}</text></view>
+      <text class="amount-sub">只记录历史付款，不代表尚欠金额 · 对方是否也有回应，由你自己观察</text>
+      <view class="progress"><view style="width: {{percent}}%"></view></view>
+      <view class="progress-foot"><text>自设月度提醒线 ¥{{monthLimit}}</text><text>{{percent}}%</text></view>
+    </view>
+
+    <view class="principle-card">
+      <text class="card-title">你的每一份付出，都值得被尊重</text>
+      <text class="muted">这里只呈现你记录下来的金额、次数和持续时间。达到提醒线时，它会安静地告诉你：是否关注、是否行动，由你决定。</text>
+    </view>
+
+    <view class="section-heading"><text>给此刻的你</text><text bindtap="openPrivacy">提醒原则</text></view>
+    <view class="reminder card" wx:for="{{reminders}}" wx:key="id" data-id="{{item.id}}" data-target="{{item.target}}" bindtap="openReminder">
+      <text class="card-title">{{item.title}}</text>
+      <text class="muted">{{item.body}}</text>
+      <text class="arrow">›</text>
+    </view>
+    <view class="reminder calm card" wx:if="{{!reminders.length}}">
+      <text class="card-title">目前没有记录达到提醒线</text>
+      <text class="muted">提醒只在你设定的边界被触及时出现。</text>
+    </view>
+
+    <view class="section-heading"><text>最近记录</text><text bindtap="openRecords">查看全部</text></view>
+    <view class="card empty" wx:if="{{!latestRecords.length}}">
+      <text class="empty-title">还没有记录</text>
+      <text class="muted">记下事实即可，不需要马上给每笔钱下结论。</text>
+    </view>
+    <view class="record card" wx:for="{{latestRecords}}" wx:key="id" data-id="{{item.id}}" bindtap="openRecord">
+      <text class="record-icon">{{item.categoryInitial}}</text>
+      <view class="record-main">
+        <text class="record-title">{{item.title}}</text>
+        <text class="muted">{{item.sourceLabel}} · {{item.date}} {{item.time}} · {{item.categoryLabel}}</text>
+      </view>
+      <view class="record-amount"><text>−¥{{item.amountText}}</text><text class="record-amount-note">你的支出</text></view>
+    </view>
+  </block>
+
+  <view wx:else>
+    <view class="empty-relation-bar" bindtap="addRelationship"><text class="relationship-avatar">＋</text><view><text class="muted">还没有建立关系</text><text>新建一段关系开始记录</text></view><text>›</text></view>
+    <view class="perspective-switch disabled-switch"><view class="active">我的记录</view><view>理想回应</view></view>
+    <view class="amount-card empty-amount-card" bindtap="addRelationship">
+      <text class="amount-label">建立关系后开始记录</text>
+      <view class="amount-line"><text class="currency">¥</text><text class="amount">0</text></view>
+      <text class="amount-sub">关系称呼可以只写你看得懂的称呼，不必填写真实姓名</text>
+      <view class="progress"><view style="width: 0%"></view></view>
+      <view class="progress-foot"><text>自设月度提醒线</text><text>—</text></view>
+    </view>
+    <view class="principle-card">
+      <text class="card-title">你的每一份付出，都值得被尊重</text>
+      <text class="muted">这里只记录事实，不要求你立刻给关系或款项下结论。</text>
+    </view>
+    <view class="section-heading"><text>给此刻的你</text><text bindtap="openPrivacy">提醒原则</text></view>
+    <view class="reminder calm card">
+      <text class="card-title">先从一段关系开始</text>
+      <text class="muted">建立关系后，再记下一笔你认为值得留下的事实。</text>
+      <text class="arrow">›</text>
+    </view>
+  </view>
+</view>

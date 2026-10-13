@@ -1,0 +1,104 @@
+<view class="page form-page">
+  <view class="notice card">
+    <text class="card-title">只记录你确认过的事实</text>
+    <text class="muted">{{sourceLabel}} · 款项性质不由金额或关系自动推定。图片只保存到本机，识别结果仍需由你确认。</text>
+  </view>
+
+  <form bindsubmit="submit">
+    <view class="field">
+      <text class="field-label">所属关系</text>
+      <picker mode="selector" range="{{relationshipNames}}" value="{{relationshipIndex}}" bindchange="onRelationshipChange">
+        <view class="picker-value">{{relationshipNames[relationshipIndex]}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="field-label">发生日期</text>
+      <picker mode="date" value="{{date}}" end="{{today}}" bindchange="onDateChange">
+        <view class="picker-value">{{date}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="field-label">发生时间（选填）</text>
+      <picker mode="time" value="{{time}}" bindchange="onTimeChange">
+        <view class="picker-value">{{time || '暂不填写'}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="field-label">事项名称</text>
+      <input class="input" name="title" value="{{title}}" data-field="title" bindinput="onFieldInput" maxlength="40" adjust-position="true" cursor-spacing="32" placeholder="例如：临时周转转账" placeholder-class="placeholder" />
+    </view>
+
+    <view class="field">
+      <text class="field-label">金额（元）</text>
+      <input class="input" name="amount" value="{{amount}}" data-field="amount" bindinput="onFieldInput" type="digit" adjust-position="true" cursor-spacing="32" placeholder="0.00" placeholder-class="placeholder" />
+    </view>
+
+    <view class="field">
+      <text class="field-label">记录类别</text><text class="muted">类别由你自行标记，不作法律认定。借出款项可选“借贷”填写约定。</text>
+      <picker mode="selector" range="{{categories}}" range-key="label" value="{{categoryIndex}}" bindchange="onCategoryChange">
+        <view class="picker-value">{{categories[categoryIndex].label}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="field-label">转账附言（选填）</text>
+      <input class="input" name="transferMemo" value="{{transferMemo}}" data-field="transferMemo" bindinput="onFieldInput" maxlength="60" adjust-position="true" cursor-spacing="32" placeholder="按原文记录，不自行补充" placeholder-class="placeholder" />
+    </view>
+
+    <view class="field image-field">
+      <text class="field-label">截图、照片或小票（选填）</text>
+      <view class="image-grid" wx:if="{{materials.length}}">
+        <view class="image-item" wx:for="{{materials}}" wx:key="path">
+          <image src="{{item.path}}" mode="aspectFill" data-index="{{item.index}}" bindtap="previewImage" />
+          <text data-index="{{item.index}}" bindtap="removeImage">移除</text>
+        </view>
+      </view>
+      <button class="secondary-button image-button" bindtap="addImages">＋ 从相册选择或拍摄</button>
+      <text class="image-help">完整付款页面、前后聊天和原始小票可以分别添加；不会自动上传。</text>
+    </view>
+
+    <view class="ocr-panel {{ocrStatus}}" wx:if="{{source === 'image' || source === 'receipt'}}">
+      <view class="ocr-head"><text class="ocr-icon">{{ocrStatus === 'done' ? '✓' : (ocrStatus === 'recognizing' ? '…' : '识')}}</text><view><text class="ocr-title">{{ocrStatus === 'recognizing' ? '正在本机识别' : (ocrStatus === 'done' ? '本机识别完成' : '本机 OCR')}}</text><text class="ocr-message">{{ocrMessage || '添加截图或小票后，自动识别金额、日期、时间和对象候选'}}</text></view></view>
+      <view class="ocr-chips" wx:if="{{ocrCandidates.length}}"><text wx:for="{{ocrCandidates}}" wx:key="*this">{{item}}</text></view>
+      <view wx:if="{{ocrAmounts.length > 1}}"><text class="ocr-note">点选本笔实际金额：</text><button wx:for="{{ocrAmounts}}" wx:key="*this" data-amount="{{item}}" bindtap="selectOCRAmount">{{amount === item ? '✓ ' : ''}}¥{{item}}</button></view>
+      <button wx:if="{{ocrRawText}}" bindtap="toggleOCRRaw">{{ocrShowRaw ? '收起识别原文' : '查看识别原文'}}</button>
+      <text wx:if="{{ocrShowRaw}}" selectable="true" class="ocr-note">{{ocrRawText}}</text>
+      <button wx:if="{{materials.length && ocrStatus !== 'recognizing'}}" bindtap="retryOCR">重新识别第一张图片</button>
+      <text class="ocr-note">识别只负责预填事实字段，不判断借款、赠与或共同支出；保存前仍由你确认。</text>
+    </view>
+
+    <block wx:if="{{isLoan}}">
+      <view class="loan-box card">
+        <text class="card-title">借贷约定</text><text class="muted">这里只记录借出事实，暂不抵扣还款或计算尚欠金额；还款情况可补充在备注中。</text>
+        <view class="field">
+          <text class="field-label">利息约定</text>
+          <picker mode="selector" range="{{interests}}" range-key="label" value="{{interestIndex}}" bindchange="onInterestChange">
+            <view class="picker-value">{{interests[interestIndex].label}}</view>
+          </picker>
+        </view>
+        <view class="field" wx:if="{{interests[interestIndex].key === 'yes'}}">
+          <text class="field-label">利息说明</text>
+          <input class="input" name="interestDetail" value="{{interestDetail}}" data-field="interestDetail" bindinput="onFieldInput" maxlength="80" adjust-position="true" cursor-spacing="32" placeholder="按双方实际约定填写" placeholder-class="placeholder" />
+        </view>
+        <view class="field">
+          <text class="field-label">约定归还日期（选填）</text>
+          <picker mode="date" value="{{dueDate}}" start="{{date}}" bindchange="onDueDateChange">
+            <view class="picker-value">{{dueDate || '尚未约定'}}</view>
+          </picker>
+          <text class="clear-date" wx:if="{{dueDate}}" bindtap="clearDueDate">清除日期</text>
+        </view>
+      </view>
+    </block>
+
+    <view class="field">
+      <text class="field-label">我的事实备注（选填）</text>
+      <textarea class="textarea" name="note" value="{{note}}" data-field="note" bindinput="onFieldInput" maxlength="300" adjust-position="true" cursor-spacing="48" placeholder="记录发生了什么，不替对方猜测动机" placeholder-class="placeholder" />
+    </view>
+
+    <button class="primary-button submit-button" form-type="submit" disabled="{{submitting}}" loading="{{submitting}}">保存到本机</button>
+  </form>
+  <canvas type="webgl" id="ocr-webgl" class="ocr-webgl"></canvas>
+</view>

@@ -1,0 +1,113 @@
+.compact-hero {
+  min-height: 360rpx;
+  padding-top: 120rpx;
+  padding-top: calc(72rpx + env(safe-area-inset-top));
+  padding-bottom: 36rpx;
+}
+
+.overview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  text-align: center;
+}
+
+.overview view + view {
+  border-left: 1rpx solid #e8ece8;
+}
+
+.overview .overview-value,
+.overview text {
+  display: block;
+}
+
+.overview .overview-value {
+  color: #316d5a;
+  font-size: 31rpx;
+}
+
+.overview text {
+  margin-top: 7rpx;
+  color: #7c817d;
+  font-size: 22rpx;
+}
+
+.add-link,
+.edit-link {
+  color: #316d5a;
+  font-size: 24rpx;
+  font-weight: 500;
+}
+
+.relationship,
+.relationship-name-line,
+.setting-row,
+.data-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.relationship.active {
+  border-color: rgba(49, 109, 90, .32);
+}
+
+.relationship-main {
+  flex: 1;
+}
+
+.relationship-name-line {
+  justify-content: flex-start;
+  gap: 14rpx;
+  margin-bottom: 10rpx;
+}
+
+.relationship-name {
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.setting-row > view text {
+  display: block;
+}
+
+.setting-row input {
+  flex: none;
+  box-sizing: border-box;
+  width: 190rpx;
+  height: 76rpx;
+  padding: 0 20rpx;
+  text-align: right;
+  color: #25312d;
+  background: #f5f7f4;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  line-height: 76rpx;
+}
+
+.save-settings {
+  width: 100%;
+  margin-top: 30rpx;
+}
+
+.data-action > view text {
+  display: block;
+}
+
+.data-action > text {
+  color: #a4aaa6;
+  font-size: 44rpx;
+}
+
+.clear-button {
+  width: 100%;
+  margin-top: 12rpx;
+}
+
+.legal-note {
+  padding: 34rpx 20rpx 0;
+  color: #8a908c;
+  font-size: 22rpx;
+  line-height: 1.7;
+  text-align: center;
+}
+.metric-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16rpx;margin:22rpx 0 38rpx}.metric-grid view{padding:26rpx;background:#fff;border:1rpx solid #e5e8e4;border-radius:24rpx}.metric-grid text{display:block}.metric-grid text:first-child{color:#316d5a;font-size:34rpx;font-weight:700}.metric-grid text:last-child{margin-top:7rpx;color:#7c817d;font-size:22rpx}

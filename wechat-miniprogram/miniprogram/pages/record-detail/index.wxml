@@ -1,0 +1,13 @@
+<view class="page detail-page" wx:if="{{record}}">
+  <view class="detail-head"><text class="detail-title">{{record.title}}</text><text class="detail-amount">¥{{record.amountText}}</text><text class="muted">{{record.relationshipName}} · {{record.date}} {{record.time}} · {{record.sourceLabel}}</text></view>
+  <scroll-view class="image-scroll" scroll-x wx:if="{{materials.length}}"><view class="image-list"><image wx:for="{{materials}}" wx:key="path" src="{{item.path}}" mode="aspectFill" data-index="{{item.index}}" bindtap="previewImage" /></view></scroll-view>
+  <view class="card detail-lines"><view><text>类目</text><text>{{record.categoryLabel}}</text></view><view wx:if="{{record.transferMemo}}"><text>转账附言</text><text>{{record.transferMemo}}</text></view><view wx:if="{{record.category === 'loan'}}"><text>利息约定</text><text>{{record.interestLabel}} {{record.interestDetail}}</text></view><view wx:if="{{record.dueDate}}"><text>约定归还日</text><text>{{record.dueDate}}</text></view><view><text>材料</text><text>{{materials.length}} 张截图／照片</text></view></view>
+  <view class="card note" wx:if="{{record.note}}"><text class="card-title">当时记下的话</text><text>{{record.note}}</text></view>
+  <view class="card evidence" wx:if="{{reachesLine}}"><text class="card-title">需要说清或咨询时，先核对上下文</text><text class="muted">付款截图：{{materials.length ? '已有' : '未添加'}} · 转账附言：{{record.transferMemo ? '已有' : '未添加'}} · 自己备注：{{record.note ? '已有' : '未添加'}}</text></view>
+  <button class="secondary-button edit-button" bindtap="edit">编辑这笔记录</button>
+  <button class="secondary-button edit-button" wx:if="{{record.category === 'loan'}}" bindtap="copyIou">复制借条参考文本</button>
+  <view class="button-row"><button class="secondary-button" data-mode="direct" bindtap="openClarify">生成沟通内容</button><button class="primary-button" data-mode="consult" bindtap="openClarify">整理咨询材料</button></view>
+  <text class="disclaimer" wx:if="{{reachesLine}}">达到提醒线只表示被标记为优先查看，不等于已经发生争议或具备某种法律性质。</text>
+  <text class="disclaimer" wx:else>未达到提醒线的记录也可以由你主动整理；提醒线只负责标记优先级。</text>
+  <button class="danger-button delete-button" bindtap="deleteRecord">删除这条记录</button>
+</view>

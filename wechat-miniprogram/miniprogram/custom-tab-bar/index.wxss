@@ -1,0 +1,44 @@
+.tabbar {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  height: 108rpx;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: #ffffff;
+  border-top: 1rpx solid #e5e8e2;
+}
+
+.tab,
+.add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab image {
+  width: 46rpx;
+  height: 46rpx;
+}
+
+.tab text {
+  margin-top: 4rpx;
+  color: #78827d;
+  font-size: 21rpx;
+  line-height: 1.2;
+}
+
+.tab text.active {
+  color: #183c34;
+  font-weight: 600;
+}
+
+.add image {
+  width: 112rpx;
+  height: 112rpx;
+  margin-top: -28rpx;
+}

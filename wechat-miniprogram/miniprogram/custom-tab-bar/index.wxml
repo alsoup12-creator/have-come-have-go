@@ -1,0 +1,19 @@
+<view class="tabbar">
+  <view class="tab" data-index="0" bindtap="switchTab">
+    <image src="{{selected === 0 ? tabs[0].selectedIcon : tabs[0].icon}}" mode="aspectFit" />
+    <text class="{{selected === 0 ? 'active' : ''}}">今天</text>
+  </view>
+  <view class="tab" data-index="1" bindtap="switchTab">
+    <image src="{{selected === 1 ? tabs[1].selectedIcon : tabs[1].icon}}" mode="aspectFit" />
+    <text class="{{selected === 1 ? 'active' : ''}}">记录</text>
+  </view>
+  <view class="add" bindtap="addRecord"><image src="/assets/icons/add-button.png" mode="aspectFit" /></view>
+  <view class="tab" data-index="2" bindtap="switchTab">
+    <image src="{{selected === 2 ? tabs[2].selectedIcon : tabs[2].icon}}" mode="aspectFit" />
+    <text class="{{selected === 2 ? 'active' : ''}}">说清</text>
+  </view>
+  <view class="tab" data-index="3" bindtap="switchTab">
+    <image src="{{selected === 3 ? tabs[3].selectedIcon : tabs[3].icon}}" mode="aspectFit" />
+    <text class="{{selected === 3 ? 'active' : ''}}">我的</text>
+  </view>
+</view>

@@ -1,0 +1,9 @@
+{
+  "desc": "知往思来页面索引配置",
+  "rules": [
+    {
+      "action": "disallow",
+      "page": "*"
+    }
+  ]
+}

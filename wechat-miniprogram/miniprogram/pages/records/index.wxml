@@ -1,0 +1,15 @@
+<view class="page">
+  <view class="hero records compact-hero"><image class="hero-bg" src="/assets/backgrounds/records-header.png" mode="aspectFill" /><text class="eyebrow">钱留下的轨迹</text><text class="hero-title">全部记录</text></view>
+  <view class="card relation-filter" wx:if="{{hasRelationship}}"><view><text class="muted">当前关系</text><text class="relation-name">{{relationshipName}}</text></view><picker mode="selector" range="{{relationshipNames}}" value="{{relationshipIndex}}" bindchange="onRelationshipChange"><view class="tag">切换关系</view></picker></view>
+  <view class="toolbox" wx:if="{{hasRelationship}}">
+    <view class="summary-line" wx:if="{{reminderLabel}}"><text>{{reminderLabel}}</text><text class="tag" bindtap="clearReminderScope">查看全部</text></view>
+    <view class="period"><picker mode="selector" range="{{years}}" range-key="label" value="{{yearIndex}}" bindchange="onYearChange"><view>{{years[yearIndex].label}}⌄</view></picker><picker mode="selector" range="{{months}}" range-key="label" value="{{monthIndex}}" bindchange="onMonthChange"><view>{{months[monthIndex].label}}⌄</view></picker></view>
+    <view class="sort"><text>排序</text><view><text class="{{sortKey === 'time' ? 'active' : ''}}" data-key="time" bindtap="setSort">时间{{sortKey === 'time' ? (sortDirection === 'desc' ? '↓' : '↑') : ''}}</text><text class="{{sortKey === 'amount' ? 'active' : ''}}" data-key="amount" bindtap="setSort">金额{{sortKey === 'amount' ? (sortDirection === 'desc' ? '↓' : '↑') : ''}}</text></view></view>
+  </view>
+  <scroll-view class="filter-row" scroll-x enhanced show-scrollbar="false"><view class="filter-inner"><view class="filter-chip {{activeFilter === item.key ? 'active' : ''}}" wx:for="{{filters}}" wx:key="key" data-key="{{item.key}}" bindtap="setFilter">{{item.label}}</view></view></scroll-view>
+  <view class="summary-line" wx:if="{{hasRelationship}}"><text>{{records.length}} 笔记录</text><text>合计 ¥{{totalAmount}}</text></view>
+  <view class="card empty" wx:if="{{!records.length}}"><text class="empty-title">这里还没有记录</text><text class="muted">记录事实，不急着替一笔钱下结论。</text></view>
+  <view class="record card" wx:for="{{records}}" wx:key="id" bindtap="openRecord" data-id="{{item.id}}">
+    <view class="record-main"><view class="record-top"><text class="record-title">{{item.title}}</text><text class="record-amount">¥{{item.amountText}}</text></view><text class="record-meta">{{item.date}} {{item.time}} · {{item.categoryLabel}} · {{item.sourceLabel}}</text><view class="record-tags" wx:if="{{item.materialCount || item.pending}}"><text class="record-material" wx:if="{{item.materialCount}}">已保存 {{item.materialCount}} 张截图／照片</text><text class="record-pending" wx:if="{{item.pending}}">达到单笔提醒线</text></view><text class="record-note" wx:if="{{item.note}}">{{item.note}}</text></view>
+  </view>
+</view>

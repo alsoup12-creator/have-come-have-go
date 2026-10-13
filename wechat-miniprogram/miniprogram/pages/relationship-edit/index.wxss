@@ -1,0 +1,25 @@
+.form-page {
+  padding-bottom: 80rpx;
+}
+
+.notice {
+  margin-top: 4rpx;
+  background: #edf4ef;
+}
+
+.clear-date {
+  display: block;
+  margin: 12rpx 8rpx 0;
+  color: #8b5555;
+  font-size: 23rpx;
+}
+
+.submit-button,
+.delete-button {
+  width: 100%;
+  margin-top: 36rpx;
+}
+
+.delete-button {
+  margin-top: 24rpx;
+}

@@ -1,0 +1,12 @@
+# Developer-specific configuration and generated cross-platform projects.
+project.private.config.json
+project.miniapp.json
+miniprogram/app.miniapp.json
+i18n/
+miniapp/
+node_modules/
+
+# Local preview codes, upload receipts and test screenshots.
+*预览*
+*上传信息.json
+tests/*.png

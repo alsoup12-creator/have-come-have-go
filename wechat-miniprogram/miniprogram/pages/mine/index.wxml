@@ -1,0 +1,58 @@
+<view class="page">
+  <view class="hero mine compact-hero">
+    <image class="hero-bg" src="/assets/backgrounds/mine-header.png" mode="aspectFill" />
+    <text class="eyebrow">只关于你自己</text>
+    <text class="hero-title">设置与觉察</text>
+    <text class="hero-copy">数据默认保存在当前设备中，不会因为达到提醒线而自动发送给任何人。</text>
+  </view>
+
+  <view class="overview card">
+    <view><text class="overview-value">{{relationshipCount}}</text><text>段关系</text></view>
+    <view><text class="overview-value">{{recordCount}}</text><text>笔记录</text></view>
+    <view><text class="overview-value">¥{{totalAmount}}</text><text>累计记录</text></view>
+  </view>
+
+  <text class="muted">统计为历史付款记录，未抵扣还款或退款，不代表尚欠金额。</text>
+  <view class="metric-grid">
+    <view><text>¥{{monthAmount}}</text><text>本月记录</text></view><view><text>¥{{yearAmount}}</text><text>本年记录</text></view><view><text>{{pendingCount}}</text><text>建议说清</text></view><view><text>{{screenshotCount}}</text><text>本机图片</text></view>
+  </view>
+
+  <view class="section-title"><text>关系管理</text><text class="add-link" bindtap="addRelationship">＋ 新增</text></view>
+  <view class="card empty" wx:if="{{!relationships.length}}">
+    <text class="empty-title">尚未建立关系</text>
+    <text class="muted">使用自己看得懂的称呼即可。</text>
+  </view>
+  <view class="relationship card {{item.active ? 'active' : ''}}" wx:for="{{relationships}}" wx:key="id">
+    <view class="relationship-main" data-id="{{item.id}}" bindtap="chooseRelationship">
+      <view class="relationship-name-line"><text class="relationship-name">{{item.name}}</text><text class="tag">{{item.typeLabel}}</text></view>
+      <text class="muted">{{item.recordCount}} 笔 · ¥{{item.amountText}}</text>
+    </view>
+    <text class="edit-link" data-id="{{item.id}}" bindtap="editRelationship">编辑</text>
+  </view>
+
+  <view class="section-title"><text>提醒线</text><text class="muted">填写 0 可关闭</text></view>
+  <view class="card settings-card">
+    <view class="setting-row"><view><text>本月累计</text><text class="muted">达到金额时提醒</text></view><input type="digit" value="{{settings.monthlyLimit}}" data-key="monthlyLimit" bindinput="inputSetting" adjust-position="true" cursor-spacing="32" /></view>
+    <view class="divider"></view>
+    <view class="setting-row"><view><text>本年累计</text><text class="muted">达到金额时提醒</text></view><input type="digit" value="{{settings.yearlyLimit}}" data-key="yearlyLimit" bindinput="inputSetting" adjust-position="true" cursor-spacing="32" /></view>
+    <view class="divider"></view>
+    <view class="setting-row"><view><text>单笔大额</text><text class="muted">在“说清”中标记为提醒记录</text></view><input type="digit" value="{{settings.singleLimit}}" data-key="singleLimit" bindinput="inputSetting" adjust-position="true" cursor-spacing="32" /></view>
+    <view class="divider"></view>
+    <view class="setting-row"><view><text>近30天付款次数</text><text class="muted">观察持续模式</text></view><input type="number" value="{{settings.oneSidedCountLimit}}" data-key="oneSidedCountLimit" bindinput="inputSetting" adjust-position="true" cursor-spacing="32" /></view>
+    <view class="divider"></view>
+    <view class="setting-row"><view><text>连续付款月份</text><text class="muted">从本月向前连续计算；本月无记录则为0</text></view><input type="number" value="{{settings.oneSidedMonthLimit}}" data-key="oneSidedMonthLimit" bindinput="inputSetting" adjust-position="true" cursor-spacing="32" /></view>
+    <view class="divider"></view>
+    <view class="setting-row"><view><text>材料整理提醒</text><text class="muted">累计达到后检查截图与上下文</text></view><input type="digit" value="{{settings.lawyerLine}}" data-key="lawyerLine" bindinput="inputSetting" adjust-position="true" cursor-spacing="32" /></view>
+    <button class="primary-button save-settings" bindtap="saveSettings">保存提醒设置</button>
+  </view>
+
+  <view class="section-title"><text>我的数据</text></view>
+  <view class="card data-card">
+    <view class="data-action" bindtap="openPrivacy"><view><text>隐私与使用说明</text><text class="muted">了解保存、分享和删除边界</text></view><text>›</text></view>
+    <view class="divider"></view>
+    <view class="data-action" bindtap="exportData"><view><text>复制数据文本</text><text class="muted">仅供自行留存，暂不支持导入恢复；图片请另行保存</text></view><text>›</text></view>
+  </view>
+  <button class="danger-button clear-button" bindtap="clearAll">清除全部本地数据</button>
+
+  <view class="legal-note">知往思来用于记录和整理事实，不替用户认定款项性质，也不当然建立律师委托关系。</view>
+</view>

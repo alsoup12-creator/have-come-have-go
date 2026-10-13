@@ -1,0 +1,8 @@
+<view class="page legal-page" wx:if="{{item}}">
+  <text class="kind">{{item.kind}}</text>
+  <text class="title">{{item.title}}</text>
+  <view class="card summary"><text>{{item.summary}}</text></view>
+  <view class="source"><text>依据来源</text><text>{{item.source}}</text></view>
+  <button class="primary-button" bindtap="copySource">复制官方来源链接</button>
+  <view class="notice">这是普法摘要，不是针对具体案件的法律意见。法律规则和司法解释可能更新，正式使用前应再次核对现行文本及完整事实。</view>
+</view>

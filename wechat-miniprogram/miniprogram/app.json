@@ -1,0 +1,55 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/records/index",
+    "pages/clarify/index",
+    "pages/clarify-compose/index",
+    "pages/legal-detail/index",
+    "pages/mine/index",
+    "pages/record-edit/index",
+    "pages/record-detail/index",
+    "pages/relationship-edit/index",
+    "pages/privacy/index"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "backgroundColor": "#f7f6f1",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#7c817d",
+    "selectedColor": "#316d5a",
+    "backgroundColor": "#fffefa",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "今天",
+        "iconPath": "assets/icons/today-line.png",
+        "selectedIconPath": "assets/icons/today-filled.png"
+      },
+      {
+        "pagePath": "pages/records/index",
+        "text": "记录",
+        "iconPath": "assets/icons/records-line.png",
+        "selectedIconPath": "assets/icons/records-filled.png"
+      },
+      {
+        "pagePath": "pages/clarify/index",
+        "text": "说清",
+        "iconPath": "assets/icons/clarify-line.png",
+        "selectedIconPath": "assets/icons/clarify-filled.png"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "text": "我的",
+        "iconPath": "assets/icons/mine-line.png",
+        "selectedIconPath": "assets/icons/mine-filled.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

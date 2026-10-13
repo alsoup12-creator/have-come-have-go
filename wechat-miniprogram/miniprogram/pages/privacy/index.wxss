@@ -1,0 +1,66 @@
+.compact-hero {
+  padding-bottom: 36rpx;
+}
+
+.status {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  text-align: center;
+}
+
+.status view + view {
+  border-left: 1rpx solid #e7ebe7;
+}
+
+.status .status-value,
+.status text {
+  display: block;
+}
+
+.status .status-value {
+  color: #316d5a;
+  font-size: 40rpx;
+}
+
+.status text {
+  margin-top: 6rpx;
+  color: #7c817d;
+  font-size: 23rpx;
+}
+
+.rule {
+  display: flex;
+  gap: 22rpx;
+}
+
+.number {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46rpx;
+  height: 46rpx;
+  color: #ffffff;
+  background: #7ca48f;
+  border-radius: 50%;
+  font-size: 23rpx;
+  font-weight: 700;
+}
+
+.warning {
+  margin-top: 34rpx;
+  border-left: 8rpx solid #d2a761;
+}
+
+.boundary {
+  padding: 24rpx 18rpx 20rpx;
+  color: #7f8783;
+  font-size: 23rpx;
+  line-height: 1.8;
+}
+
+.policy-section .muted {
+  display: block;
+  margin-top: 16rpx;
+  line-height: 1.8;
+}

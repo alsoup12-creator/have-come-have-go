@@ -1,0 +1,60 @@
+<view class="page compose-page">
+  <view class="compose-head">
+    <text class="eyebrow-dark">{{mode === 'direct' ? '和对方说清' : '整理咨询材料'}}</text>
+    <text class="compose-title">{{relationshipName}} · {{records.length}} 笔记录</text>
+    <text class="muted">合计人民币 {{totalAmount}} 元</text>
+  </view>
+
+  <view class="card scope-card" wx:if="{{draftSaveFailed}}">
+    <text class="card-title">草稿还没有保存成功</text>
+    <text class="muted">请先复制当前文字留存，腾出本机存储空间后重试。离开页面后，未保存的文字可能丢失。</text>
+  </view>
+
+  <block wx:if="{{mode === 'direct'}}">
+    <view class="card scope-card" wx:if="{{draftStale}}">
+      <text class="card-title">这份沟通稿需要重新核对</text>
+      <text class="muted">记录已变化，或这是尚未核对的旧版草稿。已保留你的文字，请核对最新记录后再复制。</text>
+      <view wx:for="{{records}}" wx:key="id"><text>{{item.date}} {{item.time}} · {{item.title}} · {{item.categoryLabel}} · ¥{{item.amountText}}</text><text wx:if="{{item.transferMemo}}"> · 附言：{{item.transferMemo}}</text></view>
+      <view class="button-row"><button class="secondary-button" bindtap="regenerateDraft">重新生成</button><button class="secondary-button" bindtap="confirmDraftReviewed">已手动核对</button></view>
+    </view>
+    <view class="card scope-card"><text class="card-title">给对方看的内容到这里为止</text><text class="muted">只包含选中的付款事实和下面的文字，不包含截图、私人备注或咨询材料。</text></view>
+    <view class="field"><text class="field-label">沟通内容（可编辑）</text><textarea class="draft-textarea" value="{{directText}}" bindinput="inputDirect" maxlength="-1" adjust-position="true" cursor-spacing="48" /></view>
+    <view class="button-row"><button class="secondary-button" bindtap="saveDraft">保存草稿</button><button class="primary-button" bindtap="copyContent">复制沟通文字</button></view>
+    <text class="disclaimer">复制后是否发送、发送给谁，完全由你决定。本功能不会自动联系对方，也不会在后台生成分享链接。</text>
+  </block>
+
+  <block wx:else>
+    <view class="steps"><view>1<text>选择记录</text></view><view class="active">2<text>对应材料</text></view><view>3<text>整理预览</text></view></view>
+    <view class="summary-grid"><view><text>{{records.length}}</text><text>选中记录</text></view><view><text>¥{{totalAmount}}</text><text>合计金额</text></view><view><text>{{materialCount}}</text><text>截图／照片</text></view></view>
+    <view class="field"><text class="field-label">补充说明（可不填）</text><textarea class="textarea" value="{{consultationMessage}}" bindinput="inputMessage" maxlength="800" adjust-position="true" cursor-spacing="48" placeholder="例如：我想先了解应该怎样保存材料、核对事实和沟通。" placeholder-class="placeholder" /></view>
+
+    <view class="section-title"><text>一笔记录对应一组材料</text></view>
+    <view class="material-card card" wx:for="{{records}}" wx:key="id">
+      <view class="material-head"><text>第 {{item.sequence}} 笔</text><text>¥{{item.amountText}}</text></view>
+      <text class="card-title">{{item.title}}</text><text class="muted">{{item.date}} {{item.time}} · {{item.categoryLabel}}</text>
+      <view class="fact-lines"><text>转账附言：{{item.transferMemo || '未记录'}}</text><text>记录说明：{{item.note || '未记录'}}</text></view>
+      <view class="fact-lines" wx:if="{{item.category === 'loan'}}"><text>约定归还日：{{item.dueDate || '未记录'}}</text><text>利息约定：{{item.interestLabel}} {{item.interestMode === 'yes' ? item.interestDetail : ''}}</text></view>
+      <view class="material-label"><text>对应材料 · {{item.materials.length}} 张</text><text>与本笔记录单独归组</text></view>
+      <view class="image-grid" wx:if="{{item.materials.length}}">
+        <view class="image-item" wx:for="{{item.materials}}" wx:for-item="image" wx:key="path">
+          <image src="{{image.path}}" mode="aspectFill" data-id="{{item.id}}" data-index="{{image.materialIndex}}" bindtap="previewImage" />
+          <text>{{image.label}}</text><text class="remove-image" data-id="{{item.id}}" data-index="{{image.materialIndex}}" bindtap="removeMaterial">移除</text>
+        </view>
+      </view>
+      <view class="image-empty" wx:else>这笔记录还没有对应的截图或照片</view>
+      <button class="secondary-button add-image" data-id="{{item.id}}" bindtap="addMaterial">＋ 添加截图或照片</button>
+    </view>
+
+    <view class="preview card" wx:if="{{preview}}">
+      <text class="preview-kicker">本机材料预览</text><text class="preview-title">关系支出记录与对应材料</text>
+      <text>关系范围：{{relationshipName}} · {{relationshipType}}</text><text>选中记录：{{records.length}} 笔</text><text>合计金额：¥{{totalAmount}}</text>
+      <view class="preview-message"><text>补充说明</text><text>{{consultationMessage || '未填写'}}</text></view>
+      <view class="preview-entry" wx:for="{{records}}" wx:key="id"><text>第 {{item.sequence}} 笔 · {{item.title}}</text><text>{{item.date}} {{item.time}} · ¥{{item.amountText}} · 材料 {{item.materials.length}} 张</text><text wx:if="{{item.category === 'loan'}}">约定归还日：{{item.dueDate || '未记录'}}；利息约定：{{item.interestLabel}} {{item.interestMode === 'yes' ? item.interestDetail : ''}}</text></view>
+      <text class="disclaimer">这里只做本机编排预览，不自动判断款项性质，也不形成法律意见。</text>
+    </view>
+
+    <view class="button-row"><button class="secondary-button" bindtap="togglePreview">{{preview ? '收起预览' : '生成整理预览'}}</button><button class="primary-button" bindtap="copyContent">复制文字摘要</button></view>
+    <button class="save-alone" bindtap="saveDraft">保存到本机</button>
+    <text class="disclaimer">截图和文字只保存在本机。当前没有后台、真实 PDF、外部链接或律所接收端。</text>
+  </block>
+</view>
